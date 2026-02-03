@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spirit Workout</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --primary: #00f2ff; /* Неоновый голубой */
+            --bg-dark: #0f0f11;
+            --card-bg: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff;
+            --text-sec: #8b8b93;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at top right, rgba(0, 242, 255, 0.15), transparent 40%);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; padding: 20px;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Заголовок и Прогресс */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .title h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+        .title span { font-size: 13px; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Прогресс бар */
+        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 30px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; box-shadow: 0 0 10px var(--primary); }
+
+        /* Карточки упражнений */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: transform 0.1s;
+        }
+        .card:active { transform: scale(0.98); }
+
+        .card-left { display: flex; align-items: center; gap: 15px; }
+        .icon-box { font-size: 24px; width: 40px; height: 40px; background: rgba(0,0,0,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+
+        .info h3 { margin: 0; font-size: 16px; font-weight: 600; }
+        .info p { margin: 4px 0 0; font-size: 13px; color: var(--text-sec); }
+
+        /* Чекбокс */
+        .checkbox {
+            width: 28px; height: 28px;
+            border: 2px solid var(--text-sec);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: 0.3s;
+        }
+        .checkbox.checked {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+        .checkbox.checked::after { content: '✔'; color: #000; font-weight: bold; font-size: 14px; }
+
+        /* Таймер (всплывашка) */
+        .timer-modal {
+            position: fixed; bottom: -100%; left: 0; width: 100%;
+            background: #1c1c1e; border-top-left-radius: 20px; border-top-right-radius: 20px;
+            padding: 20px; box-sizing: border-box;
+            transition: bottom 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center; border-top: 1px solid var(--primary);
+            z-index: 100;
+        }
+        .timer-modal.active { bottom: 0; }
+        .timer-display { font-size: 48px; font-weight: bold; margin: 10px 0; font-variant-numeric: tabular-nums; }
+        .btn-skip { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 14px; }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">
+            <span id="day-display">ДЕНЬ 1</span>
+            <h1>Неделя <span id="week-num" style="color:#fff; font-size: inherit;">1</span></h1>
+        </div>
+        <div style="font-size: 24px;">🔥</div>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progress"></div>
+    </div>
+
+    <div id="exercise-list"></div>
+
+    <div class="timer-modal" id="timerModal">
+        <p style="opacity: 0.7; margin:0;">Отдых между подходами</p>
+        <div class="timer-display" id="timerValue">01:00</div>
+        <button class="btn-skip" onclick="stopTimer()">Пропустить</button>
+    </div>
+
+    <script src="../../prilozheniye/data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
