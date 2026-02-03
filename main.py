@@ -37,7 +37,7 @@ async def cmd_start(message: types.Message):
     user_id = message.from_user.id
 
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?, 1, 1, 0)", (user_id,))
+        await db.execute("INSERT OR IGNORE INTO users (user_id, week, day, xp) VALUES (?, 1, 1, 0)", (user_id,))
         await db.commit()
 
         async with db.execute("SELECT week, day FROM users WHERE user_id = ?", (user_id,)) as cursor:
