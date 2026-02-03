@@ -9,7 +9,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 # ================= НАСТРОЙКИ =================
 TOKEN = "7590291969:AAGjymk4V9acaRGOnAzYLlYwlb5jC0b2V3w"
 # Твоя ссылка на GitHub Pages
-WEBAPP_URL = "https://be1ua4.github.io/ogurc1/"
+WEBAPP_URL = "https://github.com/be1ua4/prilozheniye"
 DB_NAME = "spirit.db"
 # =============================================
 
