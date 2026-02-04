@@ -246,6 +246,9 @@ function updateProgress() {
     }
 }
 
+// Глобальная переменная для хранения результата этой тренировки
+let sessionGain = 0;
+
 function showSuccessScreen() {
     document.getElementById('tab-workout').classList.remove('active');
     document.getElementById('nav-bar').classList.add('hidden');
@@ -253,12 +256,46 @@ function showSuccessScreen() {
     tg.HapticFeedback.notificationOccurred('success');
     playSound('sound-win');
 
-    const estGain = (Math.random() * (0.4 - 0.1) + 0.1).toFixed(2);
-    document.getElementById('jump-gain-display').innerText = `🚀 +${estGain} см к прыжку`;
+    // --- 🧬 РАСЧЕТ ПРОГРЕССА ПРЯМО В ПРИЛОЖЕНИИ ---
+
+    // 1. База от уровня (pBg берется из URL)
+    let baseGain = 0.35;
+    if (pBg === 'Intermediate') baseGain = 0.15;
+    else if (pBg === 'Advanced') baseGain = 0.04;
+
+    // 2. Бонус за стрик (+5% за каждый день, макс 50%)
+    const streakBonus = 1.0 + Math.min(currentStreak * 0.05, 0.5);
+
+    // 3. Убывающая отдача (чем выше прыжок pJump, тем сложнее)
+    // 120 см - условный генетический предел
+    const dimFactor = Math.max(0.1, (120 - pJump) / 80);
+
+    // 4. Рандом фактор (от 0.9 до 1.1)
+    const rnd = 0.9 + Math.random() * 0.2;
+
+    // СЧИТАЕМ
+    let rawGain = baseGain * streakBonus * dimFactor * rnd;
+
+    // Округляем до 2 знаков и сохраняем в переменную
+    sessionGain = parseFloat(rawGain.toFixed(2));
+
+    // Показываем игроку
+    document.getElementById('jump-gain-display').innerText = `🚀 +${sessionGain} см к прыжку`;
 
     tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
     tg.MainButton.offClick(showSuccessScreen);
     tg.MainButton.onClick(sendDataAndClose);
+}
+
+function sendDataAndClose() {
+    // Отправляем посчитанный gain боту
+    const data = JSON.stringify({
+        week: currentWeek,
+        day: currentDay,
+        status: "success",
+        gain: sessionGain // <--- ОТПРАВЛЯЕМ НАШ РАСЧЕТ
+    });
+    tg.sendData(data);
 }
 
 function sendDataAndClose() {
