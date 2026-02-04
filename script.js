@@ -92,13 +92,23 @@ if (maxTouch >= rimHeight) {
     document.getElementById('calc-need').innerText = needed;
 }
 
-// 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ
+// 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ (С ПОДТВЕРЖДЕНИЕМ)
 window.refreshData = function() {
-    tg.HapticFeedback.impactOccurred('light');
-    const data = JSON.stringify({ action: "refresh" });
-    tg.sendData(data);
+    tg.showPopup({
+        title: 'Обновление рейтинга',
+        message: 'Приложение перезагрузится, чтобы получить свежие данные от бота. Продолжить?',
+        buttons: [
+            {id: 'ok', type: 'default', text: 'Да, обновить'},
+            {id: 'cancel', type: 'cancel', text: 'Отмена'}
+        ]
+    }, function(buttonId) {
+        if (buttonId === 'ok') {
+            tg.HapticFeedback.impactOccurred('medium');
+            const data = JSON.stringify({ action: "refresh" });
+            tg.sendData(data);
+        }
+    });
 }
-
 // 5. СОХРАНЕНИЕ ПРОФИЛЯ
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
