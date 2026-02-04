@@ -13,18 +13,15 @@ const pJump = parseInt(urlParams.get('j')) || 0;
 const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать легендой');
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 
-// Вычисляем количество выполненных тренировок (примерно)
-// (Неделя - 1) * 3 + (День - 1)
+// Вычисляем количество выполненных тренировок
 const totalWorkouts = ((currentWeek - 1) * 3) + (currentDay - 1);
 
 // 2. ПРОВЕРКА: ПОКАЗАТЬ АНКЕТУ ИЛИ ПРИЛОЖЕНИЕ?
 if (pHeight === 0 || pWeight === 0) {
-    // Если данных нет -> показываем Анкету
     document.getElementById('onboarding-screen').classList.remove('hidden');
     document.getElementById('main-app').classList.add('hidden');
-    document.getElementById('nav-bar').classList.add('hidden'); // Прячем меню
+    document.getElementById('nav-bar').classList.add('hidden');
 } else {
-    // Данные есть -> показываем Приложение
     document.getElementById('main-app').classList.remove('hidden');
 }
 
@@ -32,7 +29,6 @@ if (pHeight === 0 || pWeight === 0) {
 document.getElementById('week-num').innerText = currentWeek;
 document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
 
-// Заполняем вкладку "Me"
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
 document.getElementById('display-height').innerText = pHeight;
@@ -41,7 +37,6 @@ document.getElementById('display-jump').innerText = pJump;
 document.getElementById('display-xp').innerText = currentXP;
 document.getElementById('display-total-workouts').innerText = totalWorkouts;
 
-// Заполняем Лидерборд
 document.getElementById('leader-name').innerText = userName;
 document.getElementById('leader-xp').innerText = currentXP + " XP";
 
@@ -58,13 +53,9 @@ window.saveProfile = function() {
         return;
     }
 
-    // Отправляем данные боту
     const data = JSON.stringify({
         action: "save_profile",
-        h: h,
-        w: w,
-        j: j || 0,
-        goal: goal
+        h: h, w: w, j: j || 0, goal: goal
     });
     tg.sendData(data);
 }
@@ -93,7 +84,7 @@ workout.forEach((ex, index) => {
     list.appendChild(div);
 });
 
-// 6. ФУНКЦИИ ИНТЕРФЕЙСА (Табы, Таймер)
+// 6. ФУНКЦИИ ИНТЕРФЕЙСА
 window.switchTab = function(tabId, element) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
@@ -117,53 +108,48 @@ function toggleTask(index) {
 
 // --- ИЗМЕНЕННАЯ ЛОГИКА ЗАВЕРШЕНИЯ ---
 
-// 1. Функция обновления прогресс-бара
 function updateProgress() {
     const total = workout.length;
     const done = document.querySelectorAll('.checkbox.checked').length;
     progressBar.style.width = `${(done / total) * 100}%`;
 
     if (done === total) {
-        // Когда все выполнено - показываем кнопку "ЗАВЕРШИТЬ"
         tg.MainButton.text = "🏁 ЗАВЕРШИТЬ";
         tg.MainButton.color = "#00f2ff";
         tg.MainButton.textColor = "#000000";
         tg.MainButton.show();
 
-        // Переназначаем клик на открытие экрана успеха
+        // Снимаем все старые обработчики и ставим новый
+        tg.MainButton.offClick(sendDataAndClose);
+        tg.MainButton.offClick(showSuccessScreen);
         tg.MainButton.onClick(showSuccessScreen);
     } else {
         tg.MainButton.hide();
     }
 }
 
-// 2. Функция показа экрана успеха (вместо мгновенного закрытия)
 function showSuccessScreen() {
-    // Скрываем вкладки тренировки
     document.getElementById('tab-workout').classList.remove('active');
-    document.getElementById('nav-bar').classList.add('hidden'); // Прячем меню
-
-    // Показываем экран успеха
+    document.getElementById('nav-bar').classList.add('hidden');
     document.getElementById('success-screen').classList.remove('hidden');
 
-    // Вибрация успеха
     tg.HapticFeedback.notificationOccurred('success');
 
-    // Меняем кнопку на "СОХРАНИТЬ И ВЫЙТИ"
     tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
-    tg.MainButton.offClick(showSuccessScreen); // Удаляем старый обработчик
-    tg.MainButton.onClick(sendDataAndClose);   // Ставим финальный обработчик
+    tg.MainButton.offClick(showSuccessScreen);
+    tg.MainButton.onClick(sendDataAndClose);
 }
 
-// 3. Финальная отправка данных (закрывает приложение)
 function sendDataAndClose() {
     const data = JSON.stringify({
         week: currentWeek,
         day: currentDay,
         status: "success"
     });
-    tg.sendData(data); // Вот это действие закрывает WebApp
+    tg.sendData(data);
 }
+
+// Таймер
 function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
     const display = document.getElementById('timerValue');
@@ -183,12 +169,3 @@ window.stopTimer = function() {
     clearInterval(timerInterval);
     document.getElementById('timerModal').classList.remove('active');
 }
-
-tg.MainButton.onClick(() => {
-    const data = JSON.stringify({
-        week: currentWeek,
-        day: currentDay,
-        status: "success"
-    });
-    tg.sendData(data);
-});
