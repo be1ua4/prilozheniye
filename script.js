@@ -297,7 +297,6 @@ window.stopTimer = function() {
 }
 
 // --- НОВАЯ ФУНКЦИЯ: СВАЙП ДЛЯ ЗАКРЫТИЯ (SWIPE TO CLOSE) ---
-// --- УЛУЧШЕННЫЙ СВАЙП ---
 function enableSwipeToClose() {
     const modal = document.getElementById('timerModal');
     let startY = 0;
@@ -306,45 +305,48 @@ function enableSwipeToClose() {
 
     modal.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
-        currentY = startY; // <--- ДОБАВЬТЕ ЭТУ СТРОКУ (Сброс позиции)
+        currentY = startY;
         isDragging = true;
         modal.style.transition = 'none';
-    }, {passive: true});
+    }, {passive: false}); // Изменено на false
 
     modal.addEventListener('touchmove', (e) => {
+        // 🔥 ГЛАВНАЯ СТРОКА: Блокируем скролл всего приложения
+        if (isDragging) {
+             e.preventDefault();
+        }
+
         if (!isDragging) return;
         currentY = e.touches[0].clientY;
         const diff = currentY - startY;
 
-        // Двигаем окно только вниз (если diff > 0)
+        // Если тянем вниз (diff > 0), двигаем окно
         if (diff > 0) {
-            // requestAnimationFrame делает движение более плавным на 120hz экранах
             requestAnimationFrame(() => {
                 modal.style.transform = `translateY(${diff}px)`;
             });
         }
-    }, {passive: true});
+    }, {passive: false}); // 🔥 ОБЯЗАТЕЛЬНО FALSE, иначе preventDefault не сработает
 
     modal.addEventListener('touchend', (e) => {
         isDragging = false;
         const diff = currentY - startY;
 
-        // Возвращаем CSS анимацию для плавного закрытия или возврата
+        // Возвращаем анимацию
         modal.style.transition = 'transform 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
 
         // Если протащили вниз больше чем на 100px - закрываем
         if (diff > 100) {
-            modal.style.transform = 'translateY(100%)'; // Уводим вниз до конца
+            modal.style.transform = 'translateY(100%)';
             setTimeout(() => {
-                stopTimer(); // Логическое закрытие
-                // Сброс стилей делаем чуть позже, чтобы юзер не увидел "прыжок"
+                stopTimer();
                 setTimeout(() => {
                     modal.style.transform = '';
-                    modal.style.transition = ''; // Возвращаем дефолтную транзицию из CSS
+                    modal.style.transition = '';
                 }, 100);
             }, 300);
         } else {
-            // Если мало протянули - пружиним обратно вверх
+            // Если мало - возвращаем назад
             modal.style.transform = 'translateY(0)';
         }
 
