@@ -6,7 +6,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const currentWeek = parseInt(urlParams.get('week')) || 1;
 const currentDay = parseInt(urlParams.get('day')) || 1;
 const currentXP = parseInt(urlParams.get('xp')) || 0;
-// Новые параметры
 const pHeight = parseInt(urlParams.get('h')) || 0;
 const pWeight = parseInt(urlParams.get('w')) || 0;
 const pJump = parseInt(urlParams.get('j')) || 0;
@@ -14,13 +13,17 @@ const pReach = parseInt(urlParams.get('r')) || 0;
 const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner');
 const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать легендой');
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
-// СЕРИЯ
 const currentStreak = parseInt(urlParams.get('streak')) || 0;
 
-// Вычисляем количество выполненных тренировок
+// --- ЛИДЕРБОРД (НОВОЕ) ---
+const leadersRaw = decodeURIComponent(urlParams.get('top') || "");
+// Если список пуст, используем заглушку
+const leadersList = leadersRaw ? leadersRaw.split('|') : ["Beast:5000", "Machine:3000", "You:0"];
+
+// Вычисляем тренировки
 const totalWorkouts = ((currentWeek - 1) * 3) + (currentDay - 1);
 
-// 2. ПРОВЕРКА: ПОКАЗАТЬ АНКЕТУ ИЛИ ПРИЛОЖЕНИЕ?
+// 2. ПРОВЕРКА ДАННЫХ
 if (pHeight === 0 || pWeight === 0) {
     document.getElementById('onboarding-screen').classList.remove('hidden');
     document.getElementById('main-app').classList.add('hidden');
@@ -29,10 +32,10 @@ if (pHeight === 0 || pWeight === 0) {
     document.getElementById('main-app').classList.remove('hidden');
 }
 
-// 3. ЗАПОЛНЕНИЕ ДАННЫХ В ПРОФИЛЕ
+// 3. ЗАПОЛНЕНИЕ ДАННЫХ
 document.getElementById('week-num').innerText = currentWeek;
 document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
-document.getElementById('streak-display').innerText = currentStreak; // Показываем серию
+document.getElementById('streak-display').innerText = currentStreak;
 
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
@@ -42,14 +45,38 @@ document.getElementById('display-reach').innerText = pReach;
 document.getElementById('display-bg').innerText = pBg;
 document.getElementById('display-xp').innerText = currentXP;
 
-document.getElementById('leader-name').innerText = userName;
-document.getElementById('leader-xp').innerText = currentXP + " XP";
+// --- ЗАПОЛНЕНИЕ ТАБЛИЦЫ ЛИДЕРОВ ---
+const leaderContainer = document.getElementById('tab-leaderboard');
+// Очищаем старые (фейковые) записи, оставляем только заголовок
+leaderContainer.innerHTML = `
+    <h2 style="text-align: center;">Топ Атлетов</h2>
+    <p style="text-align: center; opacity: 0.5; font-size: 12px;">Глобальный рейтинг (Beta)</p>
+`;
+
+leadersList.forEach((item, index) => {
+    const [name, xp] = item.split(':');
+    const isMe = name === userName;
+
+    const div = document.createElement('div');
+    div.className = 'card';
+    // Если это я - подсвечиваем рамкой
+    if (isMe) div.style.borderColor = 'var(--primary)';
+
+    div.innerHTML = `
+        <div class="card-left">
+            <b style="color:var(--primary); margin-right:10px;">#${index + 1}</b>
+            <div>${name} ${isMe ? '(Вы)' : ''}</div>
+        </div>
+        <div style="font-weight:bold;">${xp} XP</div>
+    `;
+    leaderContainer.appendChild(div);
+});
+
 
 // --- МАТЕМАТИКА ДАНКА ---
 const rimHeight = 305;
 const maxTouch = pReach + pJump;
 const needed = rimHeight - maxTouch;
-
 document.getElementById('calc-touch').innerText = maxTouch;
 
 if (maxTouch >= rimHeight) {
@@ -59,7 +86,7 @@ if (maxTouch >= rimHeight) {
     document.getElementById('calc-need').innerText = needed;
 }
 
-// 4. ФУНКЦИЯ СОХРАНЕНИЯ АНКЕТЫ
+// 4. СОХРАНЕНИЕ ПРОФИЛЯ
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
@@ -80,7 +107,6 @@ window.saveProfile = function() {
     tg.sendData(data);
 }
 
-// ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ЗВУКА
 function playSound(id) {
     const audio = document.getElementById(id);
     if (audio) {
@@ -124,13 +150,11 @@ window.switchTab = function(tabId, element) {
 let timerInterval;
 function toggleTask(index) {
     const checkbox = document.getElementById(`check-${index}`);
-
     if (!checkbox.classList.contains('checked')) {
         checkbox.classList.add('checked');
         tg.HapticFeedback.impactOccurred('medium');
-        playSound('sound-click'); // ЗВУК КЛИКА
+        playSound('sound-click');
 
-        // GIF
         const exName = workout[index].name;
         const gifUrl = exercisesDB[exName].gif;
         const img = document.getElementById('exercise-gif');
@@ -140,7 +164,6 @@ function toggleTask(index) {
         } else {
             img.style.display = 'none';
         }
-
         startTimer(60);
     } else {
         checkbox.classList.remove('checked');
@@ -152,13 +175,11 @@ function updateProgress() {
     const total = workout.length;
     const done = document.querySelectorAll('.checkbox.checked').length;
     progressBar.style.width = `${(done / total) * 100}%`;
-
     if (done === total) {
         tg.MainButton.text = "🏁 ЗАВЕРШИТЬ";
         tg.MainButton.color = "#00f2ff";
         tg.MainButton.textColor = "#000000";
         tg.MainButton.show();
-
         tg.MainButton.offClick(sendDataAndClose);
         tg.MainButton.offClick(showSuccessScreen);
         tg.MainButton.onClick(showSuccessScreen);
@@ -171,10 +192,8 @@ function showSuccessScreen() {
     document.getElementById('tab-workout').classList.remove('active');
     document.getElementById('nav-bar').classList.add('hidden');
     document.getElementById('success-screen').classList.remove('hidden');
-
     tg.HapticFeedback.notificationOccurred('success');
-    playSound('sound-win'); // ЗВУК ПОБЕДЫ
-
+    playSound('sound-win');
     tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
     tg.MainButton.offClick(showSuccessScreen);
     tg.MainButton.onClick(sendDataAndClose);
@@ -189,7 +208,6 @@ function sendDataAndClose() {
     tg.sendData(data);
 }
 
-// Таймер
 function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
     const display = document.getElementById('timerValue');
