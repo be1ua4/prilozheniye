@@ -1,26 +1,26 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// 1. ПАРСИНГ ПАРАМЕТРОВ (Теперь принимаем reach и bg)
+// 1. ПАРСИНГ ПАРАМЕТРОВ
 const urlParams = new URLSearchParams(window.location.search);
 const currentWeek = parseInt(urlParams.get('week')) || 1;
 const currentDay = parseInt(urlParams.get('day')) || 1;
 const currentXP = parseInt(urlParams.get('xp')) || 0;
-
-// Новые параметры профиля
+// Новые параметры
 const pHeight = parseInt(urlParams.get('h')) || 0;
 const pWeight = parseInt(urlParams.get('w')) || 0;
 const pJump = parseInt(urlParams.get('j')) || 0;
-const pReach = parseInt(urlParams.get('r')) || 0; // Касание стоя
-const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner'); // Опыт
+const pReach = parseInt(urlParams.get('r')) || 0;
+const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner');
 const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать легендой');
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
+// СЕРИЯ
+const currentStreak = parseInt(urlParams.get('streak')) || 0;
 
 // Вычисляем количество выполненных тренировок
 const totalWorkouts = ((currentWeek - 1) * 3) + (currentDay - 1);
 
 // 2. ПРОВЕРКА: ПОКАЗАТЬ АНКЕТУ ИЛИ ПРИЛОЖЕНИЕ?
-// Проверяем, заполнил ли он высоту касания и рост
 if (pHeight === 0 || pWeight === 0) {
     document.getElementById('onboarding-screen').classList.remove('hidden');
     document.getElementById('main-app').classList.add('hidden');
@@ -32,13 +32,14 @@ if (pHeight === 0 || pWeight === 0) {
 // 3. ЗАПОЛНЕНИЕ ДАННЫХ В ПРОФИЛЕ
 document.getElementById('week-num').innerText = currentWeek;
 document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
+document.getElementById('streak-display').innerText = currentStreak; // Показываем серию
 
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
 document.getElementById('display-height').innerText = pHeight;
 document.getElementById('display-jump').innerText = pJump;
-document.getElementById('display-reach').innerText = pReach; // Показываем касание
-document.getElementById('display-bg').innerText = pBg; // Показываем опыт
+document.getElementById('display-reach').innerText = pReach;
+document.getElementById('display-bg').innerText = pBg;
 document.getElementById('display-xp').innerText = currentXP;
 
 document.getElementById('leader-name').innerText = userName;
@@ -46,7 +47,7 @@ document.getElementById('leader-xp').innerText = currentXP + " XP";
 
 // --- МАТЕМАТИКА ДАНКА ---
 const rimHeight = 305;
-const maxTouch = pReach + pJump; // Касание стоя + Прыжок
+const maxTouch = pReach + pJump;
 const needed = rimHeight - maxTouch;
 
 document.getElementById('calc-touch').innerText = maxTouch;
@@ -63,8 +64,8 @@ window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
     const j = document.getElementById('in-jump').value;
-    const r = document.getElementById('in-reach').value; // Новое поле
-    const bg = document.getElementById('in-bg').value;   // Новое поле
+    const r = document.getElementById('in-reach').value;
+    const bg = document.getElementById('in-bg').value;
     const goal = document.getElementById('in-goal').value;
 
     if(!h || !w || !goal || !r) {
@@ -79,6 +80,14 @@ window.saveProfile = function() {
     tg.sendData(data);
 }
 
+// ФУНКЦИЯ ВОСПРОИЗВЕДЕНИЯ ЗВУКА
+function playSound(id) {
+    const audio = document.getElementById(id);
+    if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(e => console.log("Sound error:", e));
+    }
+}
 
 // 5. РЕНДЕР ТРЕНИРОВКИ
 const workout = programs[currentWeek] || [];
@@ -119,6 +128,7 @@ function toggleTask(index) {
     if (!checkbox.classList.contains('checked')) {
         checkbox.classList.add('checked');
         tg.HapticFeedback.impactOccurred('medium');
+        playSound('sound-click'); // ЗВУК КЛИКА
 
         // GIF
         const exName = workout[index].name;
@@ -163,6 +173,7 @@ function showSuccessScreen() {
     document.getElementById('success-screen').classList.remove('hidden');
 
     tg.HapticFeedback.notificationOccurred('success');
+    playSound('sound-win'); // ЗВУК ПОБЕДЫ
 
     tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
     tg.MainButton.offClick(showSuccessScreen);
