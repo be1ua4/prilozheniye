@@ -1,7 +1,9 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// 1. ПАРСИНГ ПАРАМЕТРОВ
+// =======================================================
+// 1. ПАРСИНГ ПАРАМЕТРОВ (ИЗ URL)
+// =======================================================
 const urlParams = new URLSearchParams(window.location.search);
 const currentWeek = parseInt(urlParams.get('week')) || 1;
 const currentDay = parseInt(urlParams.get('day')) || 1;
@@ -33,7 +35,9 @@ try {
 const leadersRaw = decodeURIComponent(urlParams.get('top') || "");
 const leadersList = leadersRaw ? leadersRaw.split('|') : ["Beast:5000", "Machine:3000", "You:0"];
 
-// 2. ПРОВЕРКА ДАННЫХ
+// =======================================================
+// 2. ПРОВЕРКА ДАННЫХ И ИНИЦИАЛИЗАЦИЯ
+// =======================================================
 if (pHeight === 0 || pWeight === 0) {
     document.getElementById('onboarding-screen').classList.remove('hidden');
     document.getElementById('main-app').classList.add('hidden');
@@ -42,10 +46,12 @@ if (pHeight === 0 || pWeight === 0) {
     document.getElementById('main-app').classList.remove('hidden');
 }
 
-// 3. ЗАПОЛНЕНИЕ ДАННЫХ
+// =======================================================
+// 3. ЗАПОЛНЕНИЕ ДАННЫХ В ИНТЕРФЕЙСЕ
+// =======================================================
 document.getElementById('week-num').innerText = currentWeek;
 
-// 🔥 ДОБАВЛЕНО: Заполнение вкладки профиля
+// Заполнение профиля
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
 document.getElementById('display-height').innerText = pHeight;
@@ -54,22 +60,20 @@ document.getElementById('display-reach').innerText = pReach;
 document.getElementById('display-bg').innerText = pBg;
 document.getElementById('display-xp').innerText = currentXP;
 
-// Логика отображения "ДЕНЬ Х" и Бейджа
+// Логика отображения "ДЕНЬ Х"
 const dayDisplay = document.getElementById('day-display');
 dayDisplay.innerHTML = `ДЕНЬ ${currentDay} / 3`;
 
-// ЕСЛИ ЕСТЬ AI WORKOUT - ДОБАВЛЯЕМ БЕЙДЖ
+// Бейдж AI
 if (aiWorkout) {
     const badge = document.createElement('span');
     badge.className = 'ai-badge';
-    badge.innerHTML = 'AI 🧠'; // Значок мозга или робота
+    badge.innerHTML = 'AI 🧠';
     dayDisplay.appendChild(badge);
 }
 
-// --- ЗАПОЛНЕНИЕ ТАБЛИЦЫ ЛИДЕРОВ ---
+// --- ТАБЛИЦА ЛИДЕРОВ ---
 const leaderContainer = document.getElementById('tab-leaderboard');
-const refreshBtn = document.querySelector('.refresh-btn');
-
 leaderContainer.innerHTML = `
     <h2 style="text-align: center;">Топ Атлетов</h2>
     <p style="text-align: center; opacity: 0.5; font-size: 12px;">Глобальный рейтинг (Beta)</p>
@@ -91,17 +95,15 @@ leadersList.forEach((item, index) => {
     leaderContainer.appendChild(div);
 });
 
-if (refreshBtn) {
-    leaderContainer.appendChild(refreshBtn);
-} else {
-    const btn = document.createElement('button');
-    btn.className = 'refresh-btn';
-    btn.innerText = '🔄 Обновить таблицу';
-    btn.onclick = window.refreshData;
-    leaderContainer.appendChild(btn);
-}
+// Кнопка обновления
+const btn = document.createElement('button');
+btn.className = 'refresh-btn';
+btn.innerText = '🔄 Обновить таблицу';
+btn.onclick = window.refreshData;
+leaderContainer.appendChild(btn);
 
-// --- МАТЕМАТИКА ДАНКА & JUMP TAB ---
+
+// --- ВКЛАДКА JUMP (МАТЕМАТИКА) ---
 const rimHeight = 305;
 const maxTouch = pReach + pJump;
 const needed = rimHeight - maxTouch;
@@ -126,7 +128,9 @@ if (lastGain > 0) {
 const barHeight = (maxTouch / 320) * 100;
 document.getElementById('rim-bar').style.height = `${barHeight}%`;
 
-// 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ
+// =======================================================
+// 4. ФУНКЦИИ ВЗАИМОДЕЙСТВИЯ С БОТОМ
+// =======================================================
 window.refreshData = function() {
     tg.showPopup({
         title: 'Обновление данных',
@@ -135,8 +139,7 @@ window.refreshData = function() {
     }, function(buttonId) {
         if (buttonId === 'ok') {
             tg.HapticFeedback.impactOccurred('medium');
-            const data = JSON.stringify({ action: "refresh" });
-            tg.sendData(data);
+            tg.sendData(JSON.stringify({ action: "refresh" }));
         }
     });
 }
@@ -149,13 +152,11 @@ window.generateAIWorkout = function() {
     }, function(btn) {
         if (btn === 'yes') {
             tg.HapticFeedback.impactOccurred('heavy');
-            const data = JSON.stringify({ action: "generate_ai" });
-            tg.sendData(data);
+            tg.sendData(JSON.stringify({ action: "generate_ai" }));
         }
     });
 }
 
-// 5. СОХРАНЕНИЕ ПРОФИЛЯ
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
@@ -167,11 +168,10 @@ window.saveProfile = function() {
         tg.showAlert("Заполни все поля, атлет!");
         return;
     }
-    const data = JSON.stringify({
+    tg.sendData(JSON.stringify({
         action: "save_profile",
         h: h, w: w, j: j || 0, r: r, bg: bg, goal: goal
-    });
-    tg.sendData(data);
+    }));
 }
 
 function playSound(id) {
@@ -182,78 +182,97 @@ function playSound(id) {
     }
 }
 
-
-// 6. РЕНДЕР ТРЕНИРОВКИ (DUOLINGO STYLE)
 // =======================================================
-// 6. РЕНДЕР КАРТЫ (ВЕСЬ ПУТЬ: НЕДЕЛИ 1-15)
+// 6. РЕНДЕР КАРТЫ (ДИНАМИЧЕСКИЙ ПУТЬ С КОРОНАМИ)
 // =======================================================
 
-const pathContainer = document.getElementById('exercise-list'); // Используем тот же контейнер
+const pathContainer = document.getElementById('exercise-list');
 pathContainer.innerHTML = `<div class="duo-container" id="map-container"></div>`;
 const mapContainer = document.getElementById('map-container');
 
-// Всего 15 недель в программе Air Alert
-const TOTAL_WEEKS = 15;
+// 🔥 ДИНАМИКА: Минимум 15 недель, но если атлет дальше - рисуем больше
+const TOTAL_WEEKS = Math.max(15, currentWeek + 5);
+const WORKOUTS_PER_WEEK = 3;
 
 for (let w = 1; w <= TOTAL_WEEKS; w++) {
-    // Определяем позицию змейки
+    // 1. Позиция (Center -> Left -> Center -> Right)
     const posType = w % 4;
     let posClass = 'pos-center';
     if (posType === 1) posClass = 'pos-left';
     if (posType === 3) posClass = 'pos-right';
 
-    // Создаем ряд
+    // 2. Создаем ряд
     const row = document.createElement('div');
     row.className = `duo-row ${posClass}`;
 
-    // Определяем статус недели
-    let statusClass = 'locked'; // По умолчанию закрыто
+    // 3. Статус и Короны
+    let statusClass = 'locked';
     let icon = w;
+    let earnedCrowns = 0;
 
     if (w < currentWeek) {
         statusClass = 'done'; // Пройденная неделя
+        earnedCrowns = 3;     // Все короны получены
     } else if (w === currentWeek) {
         statusClass = 'active'; // Текущая неделя
+        // Если день 1 -> 0 корон, День 2 -> 1 корона и т.д.
+        earnedCrowns = currentDay - 1;
+    } else {
+        earnedCrowns = 0; // Будущее
     }
 
-    // Рендер Узла (Недели)
+    // 4. Генерируем HTML корон
+    let crownsHtml = '';
+    for (let i = 0; i < WORKOUTS_PER_WEEK; i++) {
+        const isEarned = i < earnedCrowns;
+        crownsHtml += `<span class="crown-icon ${isEarned ? 'earned' : ''}">👑</span>`;
+    }
+
+    // 5. Собираем HTML узла
     const nodeId = `week-node-${w}`;
     row.innerHTML = `
-        <div class="duo-node ${statusClass}" id="${nodeId}" onclick="openWeekLevel(${w}, this)">
-            <span style="font-weight:800; font-size:20px;">${icon}</span>
+        <div class="node-wrapper">
+            <div class="duo-node ${statusClass}" id="${nodeId}" onclick="openWeekLevel(${w}, this)">
+                <span style="font-weight:800; font-size:20px;">${icon}</span>
+            </div>
+
+            <div class="crowns-row">
+                ${crownsHtml}
+            </div>
         </div>
     `;
 
-    // Линии (Connector)
+    // 6. Линии (Connector)
     if (w > 1) {
         const line = document.createElement('div');
         line.className = 'path-connector';
-        line.style.top = "-50px";
+        line.style.top = "-50px"; // Тянемся вверх
 
-        // Простая логика линий
         if (posClass === 'pos-center') line.style.left = "50%";
         if (posClass === 'pos-left') line.style.left = "30%";
         if (posClass === 'pos-right') line.style.left = "70%";
 
-        mapContainer.appendChild(line); // Добавляем линию перед рядом
+        mapContainer.appendChild(line);
     }
 
     mapContainer.appendChild(row);
 
-    // Добавляем "Пузырь" над текущей неделей
+    // 7. Пузырь "ТУТ ТЫ" (добавляем программно, чтобы не ломать верстку строки)
     if (statusClass === 'active') {
-        const node = row.querySelector('.duo-node');
+        const wrapper = row.querySelector('.node-wrapper');
         const bubble = document.createElement('div');
         bubble.className = 'speech-bubble';
         bubble.innerText = 'ТУТ ТЫ';
-        node.appendChild(bubble);
+        wrapper.appendChild(bubble);
     }
 }
 
-// --- ФУНКЦИИ ОТКРЫТИЯ УРОВНЯ (НЕДЕЛИ) ---
+// =======================================================
+// 6.1 ЛОГИКА МОДАЛЬНОГО ОКНА (ТРЕНИРОВКА ВНУТРИ НЕДЕЛИ)
+// =======================================================
 
 window.openWeekLevel = function(weekNum, element) {
-    // 1. Проверка доступа
+    // Проверка доступа (если замок - трясем)
     if (element.classList.contains('locked')) {
         tg.HapticFeedback.notificationOccurred('error');
         element.style.animation = 'shake 0.5s';
@@ -261,20 +280,18 @@ window.openWeekLevel = function(weekNum, element) {
         return;
     }
 
-    // 2. Открываем модалку с тренировкой
+    // Открываем модалку
     tg.HapticFeedback.impactOccurred('light');
     document.getElementById('workout-modal-screen').classList.remove('hidden');
     document.getElementById('modal-title').innerText = `НЕДЕЛЯ ${weekNum}`;
     document.getElementById('modal-day-display').innerText = currentDay;
 
-    // Если открыли прошлую неделю - показываем её программу, но без возможности сохранять прогресс
-    // Если текущую - показываем актуальную (или AI)
-
+    // Подбираем программу
     let targetWorkout = [];
     if (weekNum === currentWeek && aiWorkout) {
-        targetWorkout = aiWorkout; // Если сегодня AI тренировка
+        targetWorkout = aiWorkout; // AI программа на сегодня
     } else {
-        targetWorkout = programs[weekNum] || [];
+        targetWorkout = programs[weekNum] || []; // Стандартная программа из базы
     }
 
     renderDailyExercises(targetWorkout);
@@ -284,24 +301,24 @@ window.closeWorkoutModal = function() {
     document.getElementById('workout-modal-screen').classList.add('hidden');
 }
 
-// Рендер списка упражнений ВНУТРИ модалки
+// Рендер списка карточек
 function renderDailyExercises(workoutData) {
     const list = document.getElementById('modal-exercise-list');
     const progressBar = document.getElementById('modal-progress');
     const finishArea = document.getElementById('modal-finish-btn-area');
 
     list.innerHTML = "";
-    finishArea.innerHTML = ""; // Очищаем кнопку
+    finishArea.innerHTML = "";
     progressBar.style.width = "0%";
 
-    // Глобально сохраняем текущий активный воркаут
+    // Сохраняем активную тренировку
     window.activeWorkoutData = workoutData;
 
     workoutData.forEach((ex, index) => {
         const dbData = exercisesDB[ex.name] || { desc: "Упр", icon: "🏋️", gif: "" };
         const div = document.createElement('div');
         div.className = 'card';
-        div.onclick = () => toggleTaskInModal(index); // Новая функция клика
+        div.onclick = () => toggleTaskInModal(index);
         div.innerHTML = `
             <div class="card-left">
                 <div class="icon-box">${dbData.icon}</div>
@@ -316,27 +333,27 @@ function renderDailyExercises(workoutData) {
     });
 }
 
-// --- ЛОГИКА ВНУТРИ ТРЕНИРОВКИ ---
-
+// Клик по упражнению в списке
 window.toggleTaskInModal = function(index) {
     const checkbox = document.getElementById(`modal-check-${index}`);
 
     if (!checkbox.classList.contains('checked')) {
+        // Если не сделано -> Запускаем таймер и отмечаем
         checkbox.classList.add('checked');
         tg.HapticFeedback.impactOccurred('medium');
         playSound('sound-click');
 
-        // Запуск таймера
         const exName = window.activeWorkoutData[index].name;
         const dbData = exercisesDB[exName];
 
-        // Показываем картинку в таймере
+        // Картинка в таймере
         const img = document.getElementById('exercise-gif');
         img.src = dbData ? dbData.gif : "";
         img.style.display = dbData.gif ? 'block' : 'none';
 
-        startTimer(60); // Запускаем общий таймер
+        startTimer(60); // Запуск таймера
     } else {
+        // Если уже сделано -> Снимаем галочку (если случайно нажали)
         checkbox.classList.remove('checked');
     }
     updateModalProgress();
@@ -349,9 +366,9 @@ function updateModalProgress() {
 
     progressBar.style.width = `${(done / total) * 100}%`;
 
-    // Если всё сделано - показываем кнопку "Завершить" внутри модалки
+    // Если все галочки стоят -> Показываем кнопку ЗАВЕРШИТЬ
     const finishArea = document.getElementById('modal-finish-btn-area');
-    if (done === total) {
+    if (done === total && total > 0) {
         finishArea.innerHTML = `
             <button onclick="finishWorkoutFlow()" class="save-btn" style="background:#00f2ff; color:black; margin-top:20px; animation: bounceIn 0.5s;">
                 🏁 ЗАВЕРШИТЬ ТРЕНИРОВКУ
@@ -364,227 +381,70 @@ function updateModalProgress() {
 
 window.finishWorkoutFlow = function() {
     closeWorkoutModal();
-    showSuccessScreen(); // Вызываем экран успеха
+    showSuccessScreen();
 }
 
-// --- Вспомогательная функция остановки таймера (без изменений) ---
-window.stopTimer = function() {
-    clearInterval(timerInterval);
-    document.getElementById('timerModal').classList.remove('active');
-}
-// 7. НОВАЯ ЛОГИКА КЛИКА (DUO STYLE)
-window.toggleDuoTask = function(index, element) {
-    const checkbox = document.getElementById(`check-${index}`);
-    const isDone = element.classList.contains('done');
+// =======================================================
+// 7. ЭКРАН УСПЕХА И СОХРАНЕНИЕ
+// =======================================================
 
-    // Если упражнение уже сделано - просто проигрываем звук
-    if (isDone) {
-        tg.HapticFeedback.impactOccurred('light');
-        return;
-    }
-
-    // Если упражнение НЕ активно (заблокировано) - трясем его (ошибка)
-    if (!element.classList.contains('active') && !isDone) {
-        tg.HapticFeedback.notificationOccurred('error');
-        element.style.animation = 'shake 0.5s';
-        setTimeout(() => element.style.animation = '', 500);
-        return;
-    }
-
-    // ЛОГИКА ЗАПУСКА
-    tg.HapticFeedback.impactOccurred('medium');
-    playSound('sound-click');
-
-    const exName = workout[index].name;
-    const dbData = exercisesDB[exName];
-
-    // Показываем таймер / задание
-    const img = document.getElementById('exercise-gif');
-    img.src = dbData.gif || "";
-    img.style.display = dbData.gif ? 'block' : 'none';
-
-    // Передаем контекст в таймер, чтобы по завершению отметить именно этот узел
-    window.currentTaskIndex = index;
-    startTimer(60);
-}
-
-window.stopTimer = function() {
-    // 1. Остановка таймера и закрытие окна
-    clearInterval(timerInterval);
-    document.getElementById('timerModal').classList.remove('active');
-
-    // 2. Логика Duolingo: Отмечаем уровень пройденным
-    if (typeof window.currentTaskIndex !== 'undefined') {
-        const idx = window.currentTaskIndex;
-        const node = document.getElementById(`node-${idx}`);
-        const checkbox = document.getElementById(`check-${idx}`);
-
-        // Если узел есть и он еще не "done"
-        if (node && !node.classList.contains('done')) {
-            // А. Красим текущий в золотой
-            node.classList.remove('active');
-            node.classList.add('done');
-
-            // Б. Убираем пузырь "СТАРТ"
-            const bubble = node.querySelector('.speech-bubble');
-            if (bubble) bubble.remove();
-
-            // В. Отмечаем скрытый чекбокс (чтобы ползла полоска прогресса сверху)
-            if (checkbox) checkbox.classList.add('checked');
-
-            // Г. Открываем СЛЕДУЮЩИЙ уровень
-            const nextIdx = idx + 1;
-            const nextNode = document.getElementById(`node-${nextIdx}`);
-
-            if (nextNode) {
-                nextNode.classList.add('active'); // Делаем синим и пульсирующим
-
-                // Добавляем пузырь "GO" к следующему
-                const nextBubble = document.createElement('div');
-                nextBubble.className = 'speech-bubble';
-                nextBubble.innerText = 'GO!';
-                nextNode.appendChild(nextBubble);
-
-                // Плавный скролл к следующему заданию
-                setTimeout(() => {
-                    nextNode.scrollIntoView({behavior: "smooth", block: "center"});
-                }, 300);
-            }
-
-            // Д. Звук и обновление общего прогресса
-            playSound('sound-win');
-            updateProgress();
-        }
-
-        // Сбрасываем индекс, чтобы случайно не завершить повторно
-        window.currentTaskIndex = undefined;
-    }
-}
-
-// 7. ФУНКЦИИ ИНТЕРФЕЙСА
-window.switchTab = function(tabId, element) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    element.classList.add('active');
-    tg.HapticFeedback.impactOccurred('light');
-}
-
-let timerInterval;
-function toggleTask(index) {
-    const checkbox = document.getElementById(`check-${index}`);
-    if (!checkbox.classList.contains('checked')) {
-        checkbox.classList.add('checked');
-        tg.HapticFeedback.impactOccurred('medium');
-        playSound('sound-click');
-
-        const exName = workout[index].name;
-        const dbData = exercisesDB[exName];
-        const gifUrl = dbData ? dbData.gif : "";
-        const img = document.getElementById('exercise-gif');
-        if (gifUrl) {
-            img.src = gifUrl;
-            img.style.display = 'block';
-        } else {
-            img.style.display = 'none';
-        }
-        startTimer(60);
-    } else {
-        checkbox.classList.remove('checked');
-    }
-    updateProgress();
-}
-
-function updateProgress() {
-    const total = workout.length;
-    const done = document.querySelectorAll('.checkbox.checked').length;
-    progressBar.style.width = `${(done / total) * 100}%`;
-    if (done === total) {
-        tg.MainButton.text = "🏁 ЗАВЕРШИТЬ";
-        tg.MainButton.color = "#00f2ff";
-        tg.MainButton.textColor = "#000000";
-        tg.MainButton.show();
-        tg.MainButton.offClick(sendDataAndClose);
-        tg.MainButton.offClick(showSuccessScreen);
-        tg.MainButton.onClick(showSuccessScreen);
-    } else {
-        tg.MainButton.hide();
-    }
-}
-
-// Глобальная переменная для хранения результата этой тренировки
 let sessionGain = 0;
 
 function showSuccessScreen() {
-    // 1. Скрываем лишнее, показываем экран успеха
-    document.getElementById('tab-workout').classList.remove('active'); // Скрываем таб тренировки
-    document.getElementById('nav-bar').classList.add('hidden');        // Скрываем меню
-    document.getElementById('success-screen').classList.remove('hidden'); // Показываем экран победы
+    document.getElementById('tab-workout').classList.remove('active');
+    document.getElementById('nav-bar').classList.add('hidden');
+    document.getElementById('success-screen').classList.remove('hidden');
 
-    // Эффекты
     tg.HapticFeedback.notificationOccurred('success');
     playSound('sound-win');
 
-    // --- 🧬 РАСЧЕТ ПРОГРЕССА ПРЯМО В ПРИЛОЖЕНИИ ---
-
-    // 1. База от уровня
+    // Расчет прогресса
     let baseGain = 0.35;
     if (pBg === 'Intermediate') baseGain = 0.15;
     else if (pBg === 'Advanced') baseGain = 0.04;
 
-    // 2. Бонус за стрик
     const streakBonus = 1.0 + Math.min(currentStreak * 0.05, 0.5);
-
-    // 3. Убывающая отдача
     const dimFactor = Math.max(0.1, (120 - pJump) / 80);
-
-    // 4. Рандом фактор
     const rnd = 0.9 + Math.random() * 0.2;
 
-    // СЧИТАЕМ
     let rawGain = baseGain * streakBonus * dimFactor * rnd;
     sessionGain = parseFloat(rawGain.toFixed(2));
 
-    // Показываем игроку
     document.getElementById('jump-gain-display').innerText = `🚀 +${sessionGain} см к прыжку`;
 
-    // --- 🔥 ИСПРАВЛЕНИЕ КНОПКИ ---
+    // 🔥 ПОКАЗЫВАЕМ КНОПКУ TELEGRAM
     tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
-    tg.MainButton.color = "#00f2ff";      // Яркий цвет (Cyan)
-    tg.MainButton.textColor = "#000000";  // Черный текст
-    tg.MainButton.show();                 // <--- САМОЕ ВАЖНОЕ: ПОКАЗАТЬ КНОПКУ!
+    tg.MainButton.color = "#00f2ff";
+    tg.MainButton.textColor = "#000000";
+    tg.MainButton.show();
 
-    // Очищаем старые слушатели, чтобы не нажалось дважды
-    tg.MainButton.offClick(showSuccessScreen);
-    tg.MainButton.offClick(sendDataAndClose);
-
-    // Ставим действие на клик
+    tg.MainButton.offClick(sendDataAndClose); // защита от дублей
     tg.MainButton.onClick(sendDataAndClose);
 }
 
 function sendDataAndClose() {
-    // Отправляем посчитанный gain боту
     const data = JSON.stringify({
         week: currentWeek,
         day: currentDay,
         status: "success",
-        gain: sessionGain // <--- ОТПРАВЛЯЕМ НАШ РАСЧЕТ
+        gain: sessionGain
     });
     tg.sendData(data);
 }
 
-// Удалена лишняя дублирующая функция sendDataAndClose
+// =======================================================
+// 8. ТАЙМЕР И ИНТЕРФЕЙС
+// =======================================================
+
+let timerInterval;
 
 function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
     const display = document.getElementById('timerValue');
     let timeLeft = seconds;
 
-    // СБРОС ПОЗИЦИИ ПЕРЕД ОТКРЫТИЕМ
-    // Важно вернуть транзицию для выезда снизу-вверх
     modal.style.transition = 'bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
     modal.style.transform = '';
-
     modal.classList.add('active');
 
     clearInterval(timerInterval);
@@ -597,8 +457,21 @@ function startTimer(seconds) {
     }, 1000);
 }
 
+window.stopTimer = function() {
+    clearInterval(timerInterval);
+    document.getElementById('timerModal').classList.remove('active');
+}
 
-// --- НОВАЯ ФУНКЦИЯ: СВАЙП ДЛЯ ЗАКРЫТИЯ (SWIPE TO CLOSE) ---
+// Переключение вкладок меню
+window.switchTab = function(tabId, element) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    element.classList.add('active');
+    tg.HapticFeedback.impactOccurred('light');
+}
+
+// Свайп для закрытия таймера
 function enableSwipeToClose() {
     const modal = document.getElementById('timerModal');
     let startY = 0;
@@ -613,15 +486,10 @@ function enableSwipeToClose() {
     }, {passive: false});
 
     modal.addEventListener('touchmove', (e) => {
-        if (isDragging) {
-             e.preventDefault();
-        }
-
+        if (isDragging) e.preventDefault();
         if (!isDragging) return;
         currentY = e.touches[0].clientY;
         const diff = currentY - startY;
-
-        // Если тянем вниз (diff > 0), двигаем окно
         if (diff > 0) {
             requestAnimationFrame(() => {
                 modal.style.transform = `translateY(${diff}px)`;
@@ -632,11 +500,7 @@ function enableSwipeToClose() {
     modal.addEventListener('touchend', (e) => {
         isDragging = false;
         const diff = currentY - startY;
-
-        // Возвращаем анимацию
         modal.style.transition = 'transform 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-
-        // Если протащили вниз больше чем на 100px - закрываем
         if (diff > 100) {
             modal.style.transform = 'translateY(100%)';
             setTimeout(() => {
@@ -647,14 +511,9 @@ function enableSwipeToClose() {
                 }, 100);
             }, 300);
         } else {
-            // Если мало - возвращаем назад
             modal.style.transform = 'translateY(0)';
         }
-
-        startY = 0;
-        currentY = 0;
+        startY = 0; currentY = 0;
     });
 }
-
-// Запускаем слушатель свайпов
 enableSwipeToClose();

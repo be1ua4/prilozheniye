@@ -442,7 +442,38 @@
             position: absolute; top: -25px; width: 100%; text-align: center;
             font-weight: bold; color: white; font-size: 12px;
         }
+        /* --- СТИЛИ ДЛЯ КОРОН (CROWNS) --- */
+        .node-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 5; /* Чтобы было выше линий */
+        }
 
+        .crowns-row {
+            display: flex;
+            gap: 4px; /* Расстояние между коронами */
+            margin-top: 8px; /* Отступ от кружка вниз */
+            background: rgba(0, 0, 0, 0.4); /* Подложка для читаемости */
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .crown-icon {
+            font-size: 12px;
+            opacity: 0.2; /* По умолчанию тусклая */
+            filter: grayscale(100%);
+            transition: all 0.3s ease;
+        }
+
+        .crown-icon.earned {
+            opacity: 1;
+            filter: grayscale(0%);
+            text-shadow: 0 0 5px gold;
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body>
