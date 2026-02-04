@@ -496,7 +496,22 @@
 
             <div id="exercise-list"></div>
         </div>
+        <div id="workout-modal-screen" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); z-index:1000; padding:20px; box-sizing:border-box; overflow-y:auto;">
 
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <button onclick="closeWorkoutModal()" style="background:transparent; border:none; color:white; font-size:24px;">✕</button>
+                <h2 id="modal-title" style="margin:0;">Неделя X</h2>
+                <div style="width:24px;"></div> </div>
+
+            <div style="text-align:center; margin-bottom:20px;">
+                <span class="ai-badge" style="font-size:14px; padding:5px 15px;">День <span id="modal-day-display">1</span> / 3</span>
+            </div>
+
+            <div class="progress-container"><div class="progress-bar" id="modal-progress"></div></div>
+            <div id="modal-exercise-list" style="padding-bottom: 50px;"></div>
+
+            <div id="modal-finish-btn-area"></div>
+        </div>
         <div id="tab-leaderboard" class="tab-content">
             <h2 style="text-align: center;">Топ Атлетов</h2>
             <div class="card"><div class="card-left"><b>#1</b> Beast_Mode</div><div>5200 XP</div></div>

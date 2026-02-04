@@ -182,22 +182,22 @@ function playSound(id) {
     }
 }
 
-// 6. РЕНДЕР ТРЕНИРОВКИ
+
 // 6. РЕНДЕР ТРЕНИРОВКИ (DUOLINGO STYLE)
-const workout = aiWorkout || programs[currentWeek] || [];
-const list = document.getElementById('exercise-list');
-const progressBar = document.getElementById('progress');
+// =======================================================
+// 6. РЕНДЕР КАРТЫ (ВЕСЬ ПУТЬ: НЕДЕЛИ 1-15)
+// =======================================================
 
-// Очищаем и добавляем контейнер тропы
-list.innerHTML = `<div class="duo-container" id="path-container"></div>`;
-const pathContainer = document.getElementById('path-container');
+const pathContainer = document.getElementById('exercise-list'); // Используем тот же контейнер
+pathContainer.innerHTML = `<div class="duo-container" id="map-container"></div>`;
+const mapContainer = document.getElementById('map-container');
 
-workout.forEach((ex, index) => {
-    const dbData = exercisesDB[ex.name] || { desc: "Упр", icon: "🤖", gif: "" };
+// Всего 15 недель в программе Air Alert
+const TOTAL_WEEKS = 15;
 
-    // Определяем позицию (Центр -> Влево -> Центр -> Вправо)
-    // 0: Center, 1: Left, 2: Center, 3: Right
-    const posType = index % 4;
+for (let w = 1; w <= TOTAL_WEEKS; w++) {
+    // Определяем позицию змейки
+    const posType = w % 4;
     let posClass = 'pos-center';
     if (posType === 1) posClass = 'pos-left';
     if (posType === 3) posClass = 'pos-right';
@@ -206,72 +206,172 @@ workout.forEach((ex, index) => {
     const row = document.createElement('div');
     row.className = `duo-row ${posClass}`;
 
-    // Определяем состояние (Активен / Сделан / Закрыт)
-    const isDone = document.getElementById(`check-mem-${index}`)?.classList.contains('done'); // (можно хранить в localStorage, но пока упростим)
-    // В текущей логике мы используем классы динамически при клике,
-    // но при начальной загрузке все "серые", кроме первого, или если мы не сохраняем состояние внутри сессии.
-    // Для простоты: первый - активный, остальные закрыты, пока не нажмешь.
+    // Определяем статус недели
+    let statusClass = 'locked'; // По умолчанию закрыто
+    let icon = w;
 
-    // Генерируем HTML узла
-    // Добавляем ID для чекбокса логики (хоть его и не видно)
-    const nodeId = `node-${index}`;
+    if (w < currentWeek) {
+        statusClass = 'done'; // Пройденная неделя
+    } else if (w === currentWeek) {
+        statusClass = 'active'; // Текущая неделя
+    }
 
+    // Рендер Узла (Недели)
+    const nodeId = `week-node-${w}`;
     row.innerHTML = `
-        <div class="duo-node" id="${nodeId}" onclick="toggleDuoTask(${index}, this)">
-            ${dbData.icon}
-            <div class="checkbox hidden" id="check-${index}"></div>
+        <div class="duo-node ${statusClass}" id="${nodeId}" onclick="openWeekLevel(${w}, this)">
+            <span style="font-weight:800; font-size:20px;">${icon}</span>
         </div>
     `;
 
-    // Добавляем соединительную линию (Connector) к ПРЕДЫДУЩЕМУ элементу (кроме первого)
-    if (index > 0) {
+    // Линии (Connector)
+    if (w > 1) {
         const line = document.createElement('div');
         line.className = 'path-connector';
+        line.style.top = "-50px";
 
-        // Логика поворота линии
-        const prevPos = (index - 1) % 4;
-        const currPos = index % 4;
+        // Простая логика линий
+        if (posClass === 'pos-center') line.style.left = "50%";
+        if (posClass === 'pos-left') line.style.left = "30%";
+        if (posClass === 'pos-right') line.style.left = "70%";
 
-        if (prevPos === 0 && currPos === 1) line.className += ' path-c-to-l'; // Center -> Left
-        if (prevPos === 1 && currPos === 2) line.className += ' path-l-to-c'; // Left -> Center
-        if (prevPos === 2 && currPos === 3) line.className += ' path-c-to-r'; // Center -> Right
-        if (prevPos === 3 && currPos === 0) line.className += ' path-r-to-c'; // Right -> Center
-
-        // Корректируем позицию линии (она абсолютная внутри duo-container, это сложно,
-        // проще вставить её внутрь предыдущего ряда или высчитать.
-        // УПРОЩЕНИЕ: Линия просто висит в текущем row и торчит ВВЕРХ)
-
-        // В данном CSS решении (простом) линия прибита к центру экрана.
-        // Для точного соединения нужно чуть больше математики, но визуально
-        // "dashed border" по центру часто достаточно.
-        // Оставим пока без сложной геометрии линий, просто пунктир по центру, если узлы по центру.
-        // Сделаем упрощенную линию внутри row, которая ведет "вверх".
-
-        // Переопределим логику линий для простоты:
-        // Линия будет просто dashed вертикальная палка, наклоненная CSS transform
-
-       line.style.top = "-50px"; // Тянемся к предыдущему ряду
-       if (posClass === 'pos-center') line.style.left = "50%";
-       if (posClass === 'pos-left') line.style.left = "30%"; // Подгон под 20% padding
-       if (posClass === 'pos-right') line.style.left = "70%";
-
-       // Вставляем линию в текущий ряд (чтобы она шла вверх)
-       // row.appendChild(line); <--- (Это требует тонкой настройки CSS, пока отключим сложные линии, оставим простую вертикаль)
+        mapContainer.appendChild(line); // Добавляем линию перед рядом
     }
 
-    pathContainer.appendChild(row);
-});
+    mapContainer.appendChild(row);
 
-// Активируем первый элемент (START)
-const firstNode = document.getElementById('node-0');
-if (firstNode) {
-    firstNode.classList.add('active');
-    const bubble = document.createElement('div');
-    bubble.className = 'speech-bubble';
-    bubble.innerText = 'СТАРТ';
-    firstNode.appendChild(bubble);
+    // Добавляем "Пузырь" над текущей неделей
+    if (statusClass === 'active') {
+        const node = row.querySelector('.duo-node');
+        const bubble = document.createElement('div');
+        bubble.className = 'speech-bubble';
+        bubble.innerText = 'ТУТ ТЫ';
+        node.appendChild(bubble);
+    }
 }
 
+// --- ФУНКЦИИ ОТКРЫТИЯ УРОВНЯ (НЕДЕЛИ) ---
+
+window.openWeekLevel = function(weekNum, element) {
+    // 1. Проверка доступа
+    if (element.classList.contains('locked')) {
+        tg.HapticFeedback.notificationOccurred('error');
+        element.style.animation = 'shake 0.5s';
+        setTimeout(() => element.style.animation = '', 500);
+        return;
+    }
+
+    // 2. Открываем модалку с тренировкой
+    tg.HapticFeedback.impactOccurred('light');
+    document.getElementById('workout-modal-screen').classList.remove('hidden');
+    document.getElementById('modal-title').innerText = `НЕДЕЛЯ ${weekNum}`;
+    document.getElementById('modal-day-display').innerText = currentDay;
+
+    // Если открыли прошлую неделю - показываем её программу, но без возможности сохранять прогресс
+    // Если текущую - показываем актуальную (или AI)
+
+    let targetWorkout = [];
+    if (weekNum === currentWeek && aiWorkout) {
+        targetWorkout = aiWorkout; // Если сегодня AI тренировка
+    } else {
+        targetWorkout = programs[weekNum] || [];
+    }
+
+    renderDailyExercises(targetWorkout);
+}
+
+window.closeWorkoutModal = function() {
+    document.getElementById('workout-modal-screen').classList.add('hidden');
+}
+
+// Рендер списка упражнений ВНУТРИ модалки
+function renderDailyExercises(workoutData) {
+    const list = document.getElementById('modal-exercise-list');
+    const progressBar = document.getElementById('modal-progress');
+    const finishArea = document.getElementById('modal-finish-btn-area');
+
+    list.innerHTML = "";
+    finishArea.innerHTML = ""; // Очищаем кнопку
+    progressBar.style.width = "0%";
+
+    // Глобально сохраняем текущий активный воркаут
+    window.activeWorkoutData = workoutData;
+
+    workoutData.forEach((ex, index) => {
+        const dbData = exercisesDB[ex.name] || { desc: "Упр", icon: "🏋️", gif: "" };
+        const div = document.createElement('div');
+        div.className = 'card';
+        div.onclick = () => toggleTaskInModal(index); // Новая функция клика
+        div.innerHTML = `
+            <div class="card-left">
+                <div class="icon-box">${dbData.icon}</div>
+                <div class="info">
+                    <h3>${ex.name}</h3>
+                    <p>${ex.sets} x ${ex.reps}</p>
+                </div>
+            </div>
+            <div class="checkbox" id="modal-check-${index}"></div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+// --- ЛОГИКА ВНУТРИ ТРЕНИРОВКИ ---
+
+window.toggleTaskInModal = function(index) {
+    const checkbox = document.getElementById(`modal-check-${index}`);
+
+    if (!checkbox.classList.contains('checked')) {
+        checkbox.classList.add('checked');
+        tg.HapticFeedback.impactOccurred('medium');
+        playSound('sound-click');
+
+        // Запуск таймера
+        const exName = window.activeWorkoutData[index].name;
+        const dbData = exercisesDB[exName];
+
+        // Показываем картинку в таймере
+        const img = document.getElementById('exercise-gif');
+        img.src = dbData ? dbData.gif : "";
+        img.style.display = dbData.gif ? 'block' : 'none';
+
+        startTimer(60); // Запускаем общий таймер
+    } else {
+        checkbox.classList.remove('checked');
+    }
+    updateModalProgress();
+}
+
+function updateModalProgress() {
+    const total = window.activeWorkoutData.length;
+    const done = document.querySelectorAll('#modal-exercise-list .checkbox.checked').length;
+    const progressBar = document.getElementById('modal-progress');
+
+    progressBar.style.width = `${(done / total) * 100}%`;
+
+    // Если всё сделано - показываем кнопку "Завершить" внутри модалки
+    const finishArea = document.getElementById('modal-finish-btn-area');
+    if (done === total) {
+        finishArea.innerHTML = `
+            <button onclick="finishWorkoutFlow()" class="save-btn" style="background:#00f2ff; color:black; margin-top:20px; animation: bounceIn 0.5s;">
+                🏁 ЗАВЕРШИТЬ ТРЕНИРОВКУ
+            </button>
+        `;
+    } else {
+        finishArea.innerHTML = "";
+    }
+}
+
+window.finishWorkoutFlow = function() {
+    closeWorkoutModal();
+    showSuccessScreen(); // Вызываем экран успеха
+}
+
+// --- Вспомогательная функция остановки таймера (без изменений) ---
+window.stopTimer = function() {
+    clearInterval(timerInterval);
+    document.getElementById('timerModal').classList.remove('active');
+}
 // 7. НОВАЯ ЛОГИКА КЛИКА (DUO STYLE)
 window.toggleDuoTask = function(index, element) {
     const checkbox = document.getElementById(`check-${index}`);
