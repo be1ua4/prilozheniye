@@ -297,6 +297,7 @@ window.stopTimer = function() {
 }
 
 // --- НОВАЯ ФУНКЦИЯ: СВАЙП ДЛЯ ЗАКРЫТИЯ (SWIPE TO CLOSE) ---
+// --- УЛУЧШЕННЫЙ СВАЙП ---
 function enableSwipeToClose() {
     const modal = document.getElementById('timerModal');
     let startY = 0;
@@ -305,8 +306,9 @@ function enableSwipeToClose() {
 
     modal.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
+        currentY = startY; // <--- ДОБАВЬТЕ ЭТУ СТРОКУ (Сброс позиции)
         isDragging = true;
-        modal.style.transition = 'none'; // Убираем анимацию во время перетаскивания
+        modal.style.transition = 'none';
     }, {passive: true});
 
     modal.addEventListener('touchmove', (e) => {
@@ -314,9 +316,12 @@ function enableSwipeToClose() {
         currentY = e.touches[0].clientY;
         const diff = currentY - startY;
 
-        // Если тянем вниз (diff > 0), двигаем окно
+        // Двигаем окно только вниз (если diff > 0)
         if (diff > 0) {
-            modal.style.transform = `translateY(${diff}px)`;
+            // requestAnimationFrame делает движение более плавным на 120hz экранах
+            requestAnimationFrame(() => {
+                modal.style.transform = `translateY(${diff}px)`;
+            });
         }
     }, {passive: true});
 
@@ -324,24 +329,53 @@ function enableSwipeToClose() {
         isDragging = false;
         const diff = currentY - startY;
 
+        // Возвращаем CSS анимацию для плавного закрытия или возврата
+        modal.style.transition = 'transform 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
+
         // Если протащили вниз больше чем на 100px - закрываем
         if (diff > 100) {
-            modal.style.transition = 'transform 0.3s ease';
-            modal.style.transform = 'translateY(100%)';
+            modal.style.transform = 'translateY(100%)'; // Уводим вниз до конца
             setTimeout(() => {
-                stopTimer(); // Останавливаем таймер и скрываем класс active
-                modal.style.transform = ''; // Сбрасываем стиль для следующего открытия
+                stopTimer(); // Логическое закрытие
+                // Сброс стилей делаем чуть позже, чтобы юзер не увидел "прыжок"
+                setTimeout(() => {
+                    modal.style.transform = '';
+                    modal.style.transition = ''; // Возвращаем дефолтную транзицию из CSS
+                }, 100);
             }, 300);
         } else {
-            // Если мало - возвращаем назад
-            modal.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            // Если мало протянули - пружиним обратно вверх
             modal.style.transform = 'translateY(0)';
         }
-        // Сброс координат
+
         startY = 0;
         currentY = 0;
     });
 }
+
+// Обновленная функция старта (чтобы сбрасывать стили перед открытием)
+function startTimer(seconds) {
+    const modal = document.getElementById('timerModal');
+    const display = document.getElementById('timerValue');
+    let timeLeft = seconds;
+
+    // СБРОС ПОЗИЦИИ ПЕРЕД ОТКРЫТИЕМ
+    // Важно вернуть транзицию для выезда снизу-вверх
+    modal.style.transition = 'bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
+    modal.style.transform = '';
+
+    modal.classList.add('active');
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        const min = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const sec = (timeLeft % 60).toString().padStart(2, '0');
+        display.innerText = `${min}:${sec}`;
+        if (timeLeft <= 0) stopTimer();
+    }, 1000);
+}
+
 
 // Запускаем слушатель свайпов
 enableSwipeToClose();

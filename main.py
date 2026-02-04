@@ -303,6 +303,51 @@ async def process_data(message: types.Message):
             await message.answer(msg, reply_markup=kb, parse_mode="Markdown")
 
 
+# --- ВАШ ID (чтобы команду могли вызывать только вы) ---
+# Узнать свой ID можно в боте @userinfobot
+ADMIN_IDS = [941369221]  # <-- ЗАМЕНИТЕ НА СВОЙ ID (числом, без кавычек)
+
+
+@dp.message(Command("users"))
+async def cmd_users(message: types.Message):
+    # Проверка на админа
+    if message.from_user.id not in ADMIN_IDS:
+        return  # Если пишет не админ - игнорируем
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        # 1. Считаем всего людей
+        async with db.execute("SELECT COUNT(*) FROM users") as cursor:
+            total_users = (await cursor.fetchone())[0]
+
+        # 2. Берем последних 10 пользователей
+        async with db.execute("""
+            SELECT username, height, weight, goal, xp, streak 
+            FROM users 
+            ORDER BY user_id DESC 
+            LIMIT 10
+        """) as cursor:
+            rows = await cursor.fetchall()
+
+    # Формируем красивый отчет
+    text = f"📊 **Статистика Spirit App**\n\n"
+    text += f"👥 Всего атлетов: **{total_users}**\n"
+    text += f"➖➖➖➖➖➖➖➖\n"
+    text += f"🆕 **Последние 10:**\n\n"
+
+    for row in rows:
+        username = row[0] if row[0] else "Без ника"
+        h, w = row[1], row[2]
+        goal = row[3]
+        xp = row[4]
+        streak = row[5]
+
+        text += f"👤 **{username}**\n"
+        text += f"   📏 {h}см / ⚖️ {w}кг\n"
+        text += f"   🎯 {goal}\n"
+        text += f"   ⚡️ {xp} XP | 🔥 {streak} дн.\n\n"
+
+    await message.answer(text, parse_mode="Markdown")
+
 async def main():
     await init_db()
     bot = Bot(token=TOKEN)
