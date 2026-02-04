@@ -35,28 +35,33 @@ async def init_db():
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = message.from_user.id
+    username = message.from_user.first_name  # Берем имя для профиля
 
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("INSERT OR IGNORE INTO users (user_id, week, day, xp) VALUES (?, 1, 1, 0)", (user_id,))
         await db.commit()
 
-        async with db.execute("SELECT week, day FROM users WHERE user_id = ?", (user_id,)) as cursor:
+        # Запрашиваем больше данных: XP и Week/Day
+        async with db.execute("SELECT week, day, xp FROM users WHERE user_id = ?", (user_id,)) as cursor:
             row = await cursor.fetchone()
-            week, day = row if row else (1, 1)
+            week, day, xp = row if row else (1, 1, 0)
 
-    # Передаем и неделю, и день в URL
-    app_link = f"{WEBAPP_URL}?week={week}&day={day}"
+    # ⚠️ ВАЖНО: Добавляем xp и name в ссылку
+    # Мы кодируем имя, чтобы русские буквы не сломали ссылку
+    import urllib.parse
+    safe_name = urllib.parse.quote(username)
+
+    app_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}"
 
     kb = ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="🔥 Начать тренировку", web_app=WebAppInfo(url=app_link))]
+        [KeyboardButton(text="🔥 Spirit App", web_app=WebAppInfo(url=app_link))]
     ], resize_keyboard=True)
 
     await message.answer(
         f"🌪 **Spirit of Power**\n"
-        f"Неделя: {week} | День: {day}/3\n\n"
-        "Готов стать выше? Жми кнопку 👇",
-        reply_markup=kb,
-        parse_mode="Markdown"
+        f"Твой уровень: {xp} XP\n"
+        "Залетай в приложение 👇",
+        reply_markup=kb
     )
 
 
