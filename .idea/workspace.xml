@@ -5,6 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5972d855-6adf-4f16-bfd2-d54b1e1a4d1b" name="Changes" comment="1">
+      <change afterPath="$PROJECT_DIR$/gifs/leap.gif" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/data.js" beforeDir="false" afterPath="$PROJECT_DIR$/data.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spirit.db" beforeDir="false" afterPath="$PROJECT_DIR$/spirit.db" afterDir="false" />
     </list>
@@ -57,6 +59,7 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Gleb\PycharmProjects\prilozheniye\gifs" />
       <recent name="C:\Users\Gleb\PycharmProjects\prilozheniye" />
     </key>
   </component>
@@ -240,7 +243,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770198417847</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="1">
+      <option name="closed" value="true" />
+      <created>1770198751532</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1770198751532</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
