@@ -8,10 +8,10 @@ const currentDay = parseInt(urlParams.get('day')) || 1;
 const currentXP = parseInt(urlParams.get('xp')) || 0;
 const pHeight = parseInt(urlParams.get('h')) || 0;
 const pWeight = parseInt(urlParams.get('w')) || 0;
-const pJump = parseFloat(urlParams.get('j')) || 0; // Прыжок теперь float
+const pJump = parseFloat(urlParams.get('j')) || 0;
 const pReach = parseInt(urlParams.get('r')) || 0;
 const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner');
-const pGoal = decodeURIComponent(urlParams.get('goal') || 'Vertical Jump'); // Дефолт изменился
+const pGoal = decodeURIComponent(urlParams.get('goal') || 'Vertical Jump');
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 const currentStreak = parseInt(urlParams.get('streak')) || 0;
 const lastGain = parseFloat(urlParams.get('gain')) || 0;
@@ -21,9 +21,7 @@ let aiWorkout = null;
 try {
     const rawPlan = urlParams.get('plan');
     if (rawPlan) {
-        // Декодируем Base64 в JSON строку, затем в Объект
-        const jsonStr = atob(rawPlan); // atob декодирует base64
-        // Фикс для русских символов в base64
+        const jsonStr = atob(rawPlan);
         const fixedJson = decodeURIComponent(escape(jsonStr));
         aiWorkout = JSON.parse(fixedJson);
     }
@@ -34,9 +32,6 @@ try {
 // --- ЛИДЕРБОРД ---
 const leadersRaw = decodeURIComponent(urlParams.get('top') || "");
 const leadersList = leadersRaw ? leadersRaw.split('|') : ["Beast:5000", "Machine:3000", "You:0"];
-
-// Вычисляем тренировки
-const totalWorkouts = ((currentWeek - 1) * 3) + (currentDay - 1);
 
 // 2. ПРОВЕРКА ДАННЫХ
 if (pHeight === 0 || pWeight === 0) {
@@ -50,13 +45,11 @@ if (pHeight === 0 || pWeight === 0) {
 // 3. ЗАПОЛНЕНИЕ ДАННЫХ
 document.getElementById('week-num').innerText = currentWeek;
 document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
-// Если план от ИИ - добавим пометку
 if (aiWorkout) {
     document.getElementById('day-display').innerHTML += ` <span style="color:#0f0; font-size:10px; border:1px solid #0f0; padding:1px 4px; border-radius:4px;">AI</span>`;
 }
 
 document.getElementById('streak-display').innerText = currentStreak;
-
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
 document.getElementById('display-height').innerText = pHeight;
@@ -77,11 +70,9 @@ leaderContainer.innerHTML = `
 leadersList.forEach((item, index) => {
     const [name, xp] = item.split(':');
     const isMe = name === userName;
-
     const div = document.createElement('div');
     div.className = 'card';
     if (isMe) div.style.borderColor = 'var(--primary)';
-
     div.innerHTML = `
         <div class="card-left">
             <b style="color:var(--primary); margin-right:10px;">#${index + 1}</b>
@@ -102,12 +93,10 @@ if (refreshBtn) {
     leaderContainer.appendChild(btn);
 }
 
-
 // --- МАТЕМАТИКА ДАНКА & JUMP TAB ---
 const rimHeight = 305;
 const maxTouch = pReach + pJump;
 const needed = rimHeight - maxTouch;
-
 document.getElementById('calc-touch').innerText = maxTouch.toFixed(1);
 
 if (maxTouch >= rimHeight) {
@@ -117,7 +106,6 @@ if (maxTouch >= rimHeight) {
     document.getElementById('calc-need').innerText = needed.toFixed(1);
 }
 
-// Заполняем вкладку JUMP
 document.getElementById('jump-tab-val').innerText = pJump.toFixed(2);
 if (lastGain > 0) {
     document.getElementById('jump-tab-gain').innerText = `+${lastGain} см (посл. треня)`;
@@ -127,24 +115,15 @@ if (lastGain > 0) {
     document.getElementById('jump-tab-gain').style.color = '#8b8b93';
 }
 
-// Визуализация высоты (процент от кольца)
-// Допустим, 0% это касание стоя, 100% это кольцо
-const jumpProgress = Math.min((maxTouch / 305) * 100, 100);
-// Или лучше: отношение прыжка к нужному прыжку?
-// Сделаем просто высоту бара относительно 320см (чуть выше кольца)
 const barHeight = (maxTouch / 320) * 100;
 document.getElementById('rim-bar').style.height = `${barHeight}%`;
-
 
 // 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ
 window.refreshData = function() {
     tg.showPopup({
         title: 'Обновление данных',
-        message: 'Приложение перезагрузится для получения свежего рейтинга и программы. Продолжить?',
-        buttons: [
-            {id: 'ok', type: 'default', text: 'Да, обновить'},
-            {id: 'cancel', type: 'cancel', text: 'Отмена'}
-        ]
+        message: 'Приложение перезагрузится. Продолжить?',
+        buttons: [{id: 'ok', type: 'default', text: 'Да'}, {id: 'cancel', type: 'cancel', text: 'Отмена'}]
     }, function(buttonId) {
         if (buttonId === 'ok') {
             tg.HapticFeedback.impactOccurred('medium');
@@ -154,15 +133,11 @@ window.refreshData = function() {
     });
 }
 
-// --- НОВАЯ ФУНКЦИЯ: ГЕНЕРАЦИЯ ИИ ТРЕНИРОВКИ ---
 window.generateAIWorkout = function() {
     tg.showPopup({
         title: 'AI Тренер 🤖',
         message: 'Нейросеть составит новую уникальную программу на сегодня. Текущая тренировка будет заменена. Продолжить?',
-        buttons: [
-            {id: 'yes', type: 'default', text: 'Да, подобрать'},
-            {id: 'no', type: 'cancel', text: 'Отмена'}
-        ]
+        buttons: [{id: 'yes', type: 'default', text: 'Да, подобрать'}, {id: 'no', type: 'cancel', text: 'Отмена'}]
     }, function(btn) {
         if (btn === 'yes') {
             tg.HapticFeedback.impactOccurred('heavy');
@@ -179,13 +154,11 @@ window.saveProfile = function() {
     const j = document.getElementById('in-jump').value;
     const r = document.getElementById('in-reach').value;
     const bg = document.getElementById('in-bg').value;
-    const goal = document.getElementById('in-goal').value; // ТЕПЕРЬ ЭТО SELECT
-
+    const goal = document.getElementById('in-goal').value;
     if(!h || !w || !goal || !r) {
         tg.showAlert("Заполни все поля, атлет!");
         return;
     }
-
     const data = JSON.stringify({
         action: "save_profile",
         h: h, w: w, j: j || 0, r: r, bg: bg, goal: goal
@@ -201,20 +174,13 @@ function playSound(id) {
     }
 }
 
-// 6. РЕНДЕР ТРЕНИРОВКИ (УМНАЯ ЛОГИКА)
-// Если есть AI программа - берем её. Если нет - берем из data.js
+// 6. РЕНДЕР ТРЕНИРОВКИ
 const workout = aiWorkout || programs[currentWeek] || [];
-
 const list = document.getElementById('exercise-list');
 const progressBar = document.getElementById('progress');
-
-// Очистка списка перед рендером
 list.innerHTML = "";
-
 workout.forEach((ex, index) => {
-    // Если описание есть в БД упражнений - берем оттуда, иначе ставим заглушку
     const dbData = exercisesDB[ex.name] || { desc: "Упражнение от тренера", icon: "🤖", gif: "" };
-
     const div = document.createElement('div');
     div.className = 'card';
     div.onclick = () => toggleTask(index);
@@ -248,11 +214,9 @@ function toggleTask(index) {
         tg.HapticFeedback.impactOccurred('medium');
         playSound('sound-click');
 
-        // Получаем GIF из базы упражнений
         const exName = workout[index].name;
         const dbData = exercisesDB[exName];
         const gifUrl = dbData ? dbData.gif : "";
-
         const img = document.getElementById('exercise-gif');
         if (gifUrl) {
             img.src = gifUrl;
@@ -291,8 +255,6 @@ function showSuccessScreen() {
     tg.HapticFeedback.notificationOccurred('success');
     playSound('sound-win');
 
-    // --- ГЕНЕРАЦИЯ ВИЗУАЛЬНОГО ИМПАКТА ---
-    // Это число просто для анимации, реальное сохраняется ботом
     const estGain = (Math.random() * (0.4 - 0.1) + 0.1).toFixed(2);
     document.getElementById('jump-gain-display').innerText = `🚀 +${estGain} см к прыжку`;
 
@@ -314,7 +276,11 @@ function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
     const display = document.getElementById('timerValue');
     let timeLeft = seconds;
+
+    // Сброс позиции перед открытием (на случай если прошлый раз свайпнули)
+    modal.style.transform = 'translateY(0)';
     modal.classList.add('active');
+
     clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timeLeft--;
@@ -329,3 +295,53 @@ window.stopTimer = function() {
     clearInterval(timerInterval);
     document.getElementById('timerModal').classList.remove('active');
 }
+
+// --- НОВАЯ ФУНКЦИЯ: СВАЙП ДЛЯ ЗАКРЫТИЯ (SWIPE TO CLOSE) ---
+function enableSwipeToClose() {
+    const modal = document.getElementById('timerModal');
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+
+    modal.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+        isDragging = true;
+        modal.style.transition = 'none'; // Убираем анимацию во время перетаскивания
+    }, {passive: true});
+
+    modal.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        currentY = e.touches[0].clientY;
+        const diff = currentY - startY;
+
+        // Если тянем вниз (diff > 0), двигаем окно
+        if (diff > 0) {
+            modal.style.transform = `translateY(${diff}px)`;
+        }
+    }, {passive: true});
+
+    modal.addEventListener('touchend', (e) => {
+        isDragging = false;
+        const diff = currentY - startY;
+
+        // Если протащили вниз больше чем на 100px - закрываем
+        if (diff > 100) {
+            modal.style.transition = 'transform 0.3s ease';
+            modal.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+                stopTimer(); // Останавливаем таймер и скрываем класс active
+                modal.style.transform = ''; // Сбрасываем стиль для следующего открытия
+            }, 300);
+        } else {
+            // Если мало - возвращаем назад
+            modal.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            modal.style.transform = 'translateY(0)';
+        }
+        // Сброс координат
+        startY = 0;
+        currentY = 0;
+    });
+}
+
+// Запускаем слушатель свайпов
+enableSwipeToClose();
