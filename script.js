@@ -516,40 +516,49 @@ function updateProgress() {
 let sessionGain = 0;
 
 function showSuccessScreen() {
-    document.getElementById('tab-workout').classList.remove('active');
-    document.getElementById('nav-bar').classList.add('hidden');
-    document.getElementById('success-screen').classList.remove('hidden');
+    // 1. Скрываем лишнее, показываем экран успеха
+    document.getElementById('tab-workout').classList.remove('active'); // Скрываем таб тренировки
+    document.getElementById('nav-bar').classList.add('hidden');        // Скрываем меню
+    document.getElementById('success-screen').classList.remove('hidden'); // Показываем экран победы
+
+    // Эффекты
     tg.HapticFeedback.notificationOccurred('success');
     playSound('sound-win');
 
     // --- 🧬 РАСЧЕТ ПРОГРЕССА ПРЯМО В ПРИЛОЖЕНИИ ---
 
-    // 1. База от уровня (pBg берется из URL)
+    // 1. База от уровня
     let baseGain = 0.35;
     if (pBg === 'Intermediate') baseGain = 0.15;
     else if (pBg === 'Advanced') baseGain = 0.04;
 
-    // 2. Бонус за стрик (+5% за каждый день, макс 50%)
+    // 2. Бонус за стрик
     const streakBonus = 1.0 + Math.min(currentStreak * 0.05, 0.5);
 
-    // 3. Убывающая отдача (чем выше прыжок pJump, тем сложнее)
-    // 120 см - условный генетический предел
+    // 3. Убывающая отдача
     const dimFactor = Math.max(0.1, (120 - pJump) / 80);
 
-    // 4. Рандом фактор (от 0.9 до 1.1)
+    // 4. Рандом фактор
     const rnd = 0.9 + Math.random() * 0.2;
 
     // СЧИТАЕМ
     let rawGain = baseGain * streakBonus * dimFactor * rnd;
-
-    // Округляем до 2 знаков и сохраняем в переменную
     sessionGain = parseFloat(rawGain.toFixed(2));
 
     // Показываем игроку
     document.getElementById('jump-gain-display').innerText = `🚀 +${sessionGain} см к прыжку`;
 
+    // --- 🔥 ИСПРАВЛЕНИЕ КНОПКИ ---
     tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
+    tg.MainButton.color = "#00f2ff";      // Яркий цвет (Cyan)
+    tg.MainButton.textColor = "#000000";  // Черный текст
+    tg.MainButton.show();                 // <--- САМОЕ ВАЖНОЕ: ПОКАЗАТЬ КНОПКУ!
+
+    // Очищаем старые слушатели, чтобы не нажалось дважды
     tg.MainButton.offClick(showSuccessScreen);
+    tg.MainButton.offClick(sendDataAndClose);
+
+    // Ставим действие на клик
     tg.MainButton.onClick(sendDataAndClose);
 }
 
