@@ -122,15 +122,15 @@ async def init_db():
         print(f"✅ База данных подключена: {DB_NAME}")
 
 
-# --- СОЗДАНИЕ ССЫЛКИ ---
+# --- СОЗДАНИЕ ССЫЛКИ (ГЛАВНАЯ ФУНКЦИЯ) ---
 async def create_app_link(user_id, db, force_new=False):
-    # Получаем данные пользователя (ВСЕ ПОЛЯ)
+    # Получаем ВСЕ данные пользователя, чтобы не было IndexError
     async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
         row = await cursor.fetchone()
 
     if not row: return None
 
-    # 🔥 1. ВОССТАНОВЛЕННЫЙ БЛОК ЛИДЕРБОРДА 🔥
+    # 🔥 1. СБОР ЛИДЕРБОРДА (ВОЗВРАЩЕНО!)
     leaders_str = ""
     try:
         async with db.execute("SELECT username, xp FROM users ORDER BY xp DESC LIMIT 10") as cursor:
@@ -138,18 +138,21 @@ async def create_app_link(user_id, db, force_new=False):
 
         leaders_list = []
         for r in leaders_data:
+            # r[0] - имя, r[1] - опыт
             name = r[0] if r[0] else "Атлет"
             leaders_list.append(f"{name}:{r[1]}")
         leaders_str = "|".join(leaders_list)
     except Exception as e:
         print(f"Leaderboard error: {e}")
 
-    # 2. ДАННЫЕ ЮЗЕРА
+    # 2. РАСПАКОВКА ДАННЫХ ЮЗЕРА
+    # Порядок колонок в SQLite важен:
+    # 0:id, 1:name, 2:week, 3:day, 4:xp, 5:h, 6:w, 7:jump, 8:reach, 9:bg, 10:goal, 11:streak, 12:last, 13:gain, 14:plan, 15:date
     week, day = row[2], row[3]
     current_plan, plan_date = row[14], row[15]
     today_str = datetime.now().strftime("%Y-%m-%d")
 
-    # 3. ЛОГИКА ПЛАНА
+    # 3. ЛОГИКА ПЛАНА (Кэш или Генерация)
     if (not current_plan) or (plan_date != today_str) or force_new:
         print(f"LOG: Генерирую план для {user_id}")
         h = row[5] if row[5] > 0 else 180
@@ -166,14 +169,14 @@ async def create_app_link(user_id, db, force_new=False):
 
     safe_plan = base64.b64encode(ai_plan_json.encode('utf-8')).decode('utf-8')
 
-    # 4. СБОРКА ССЫЛКИ (ТЕПЕРЬ С TOP)
+    # 4. СБОРКА ССЫЛКИ С ПАРАМЕТРАМИ
     params = {
         'week': week, 'day': day, 'xp': row[4],
         'name': row[1] or "Атлет",
         'h': row[5], 'w': row[6], 'j': row[7], 'r': row[8],
         'bg': row[9], 'goal': row[10], 'streak': row[11],
         'gain': row[13], 'plan': safe_plan,
-        'top': leaders_str  # <-- ВЕРНУЛИ
+        'top': leaders_str  # <-- Передаем топ игроков!
     }
     return f"{WEBAPP_URL}?{urllib.parse.urlencode(params)}"
 
@@ -193,6 +196,7 @@ async def cmd_start(message: types.Message):
             res = await c.fetchone()
             streak = res[0] if res else 0
 
+        # Передаем db, чтобы не открывать соединение дважды
         link = await create_app_link(user_id, db)
 
     kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Открыть Spirit App", web_app=WebAppInfo(url=link))]],
@@ -222,12 +226,12 @@ async def process_data(message: types.Message):
     user_id = message.from_user.id
 
     async with aiosqlite.connect(DB_NAME) as db:
-        # Обновляем имя
+        # Обновляем имя при каждом входе
         await db.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)", (user_id, "User"))
         await db.commit()
 
         if data.get("action") == "refresh":
-            pass  # Обновим ссылку ниже
+            pass
 
         elif data.get("action") == "generate_ai":
             link = await create_app_link(user_id, db, force_new=True)
@@ -249,15 +253,14 @@ async def process_data(message: types.Message):
             return
 
         elif data.get("status") == "success":
+            # Используем SELECT * чтобы не путать индексы
             async with db.execute("SELECT * FROM users WHERE user_id=?", (user_id,)) as c:
                 row = await c.fetchone()
 
             if not row: return
 
-            # --- УМНАЯ КАЛИБРОВКА (Данные от клиента) ---
+            # --- ФИКСАЦИЯ РЕЗУЛЬТАТА ---
             real_gain = float(data.get("gain", 0.1))
-
-            # Данные из базы
             current_jump = row[7]  # jump
             new_jump = round(current_jump + real_gain, 2)
 
@@ -301,8 +304,7 @@ async def process_data(message: types.Message):
             await message.answer(msg, reply_markup=kb, parse_mode="Markdown")
             return
 
-        # 🔥 ИСПРАВЛЕНИЕ: Этот блок теперь ВНУТРИ async with
-        # Дефолтный ответ
+        # 🔥 ИСПРАВЛЕННЫЙ ОТСТУП: Этот блок теперь ВНУТРИ async with
         link = await create_app_link(user_id, db)
         kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
                                  resize_keyboard=True)

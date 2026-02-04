@@ -41,9 +41,18 @@ if (pHeight === 0 || pWeight === 0) {
 } else {
     document.getElementById('main-app').classList.remove('hidden');
 }
-// 3. ЗАПОЛНЕНИЕ ДАННЫХ
+
 // 3. ЗАПОЛНЕНИЕ ДАННЫХ
 document.getElementById('week-num').innerText = currentWeek;
+
+// 🔥 ДОБАВЛЕНО: Заполнение вкладки профиля
+document.getElementById('profile-name').innerText = userName;
+document.getElementById('display-goal').innerText = pGoal;
+document.getElementById('display-height').innerText = pHeight;
+document.getElementById('display-jump').innerText = pJump.toFixed(1);
+document.getElementById('display-reach').innerText = pReach;
+document.getElementById('display-bg').innerText = pBg;
+document.getElementById('display-xp').innerText = currentXP;
 
 // Логика отображения "ДЕНЬ Х" и Бейджа
 const dayDisplay = document.getElementById('day-display');
@@ -56,6 +65,7 @@ if (aiWorkout) {
     badge.innerHTML = 'AI 🧠'; // Значок мозга или робота
     dayDisplay.appendChild(badge);
 }
+
 // --- ЗАПОЛНЕНИЕ ТАБЛИЦЫ ЛИДЕРОВ ---
 const leaderContainer = document.getElementById('tab-leaderboard');
 const refreshBtn = document.querySelector('.refresh-btn');
@@ -298,22 +308,18 @@ function sendDataAndClose() {
     tg.sendData(data);
 }
 
-function sendDataAndClose() {
-    const data = JSON.stringify({
-        week: currentWeek,
-        day: currentDay,
-        status: "success"
-    });
-    tg.sendData(data);
-}
+// Удалена лишняя дублирующая функция sendDataAndClose
 
 function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
     const display = document.getElementById('timerValue');
     let timeLeft = seconds;
 
-    // Сброс позиции перед открытием (на случай если прошлый раз свайпнули)
-    modal.style.transform = 'translateY(0)';
+    // СБРОС ПОЗИЦИИ ПЕРЕД ОТКРЫТИЕМ
+    // Важно вернуть транзицию для выезда снизу-вверх
+    modal.style.transition = 'bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
+    modal.style.transform = '';
+
     modal.classList.add('active');
 
     clearInterval(timerInterval);
@@ -343,10 +349,9 @@ function enableSwipeToClose() {
         currentY = startY;
         isDragging = true;
         modal.style.transition = 'none';
-    }, {passive: false}); // Изменено на false
+    }, {passive: false});
 
     modal.addEventListener('touchmove', (e) => {
-        // 🔥 ГЛАВНАЯ СТРОКА: Блокируем скролл всего приложения
         if (isDragging) {
              e.preventDefault();
         }
@@ -361,7 +366,7 @@ function enableSwipeToClose() {
                 modal.style.transform = `translateY(${diff}px)`;
             });
         }
-    }, {passive: false}); // 🔥 ОБЯЗАТЕЛЬНО FALSE, иначе preventDefault не сработает
+    }, {passive: false});
 
     modal.addEventListener('touchend', (e) => {
         isDragging = false;
@@ -389,30 +394,6 @@ function enableSwipeToClose() {
         currentY = 0;
     });
 }
-
-// Обновленная функция старта (чтобы сбрасывать стили перед открытием)
-function startTimer(seconds) {
-    const modal = document.getElementById('timerModal');
-    const display = document.getElementById('timerValue');
-    let timeLeft = seconds;
-
-    // СБРОС ПОЗИЦИИ ПЕРЕД ОТКРЫТИЕМ
-    // Важно вернуть транзицию для выезда снизу-вверх
-    modal.style.transition = 'bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
-    modal.style.transform = '';
-
-    modal.classList.add('active');
-
-    clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-        timeLeft--;
-        const min = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-        const sec = (timeLeft % 60).toString().padStart(2, '0');
-        display.innerText = `${min}:${sec}`;
-        if (timeLeft <= 0) stopTimer();
-    }, 1000);
-}
-
 
 // Запускаем слушатель свайпов
 enableSwipeToClose();
