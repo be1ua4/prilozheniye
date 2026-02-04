@@ -8,7 +8,7 @@ const currentDay = parseInt(urlParams.get('day')) || 1;
 const currentXP = parseInt(urlParams.get('xp')) || 0;
 const pHeight = parseInt(urlParams.get('h')) || 0;
 const pWeight = parseInt(urlParams.get('w')) || 0;
-const pJump = parseInt(urlParams.get('j')) || 0;
+const pJump = parseFloat(urlParams.get('j')) || 0; // Прыжок теперь float
 const pReach = parseInt(urlParams.get('r')) || 0;
 const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner');
 const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать легендой');
@@ -59,7 +59,7 @@ document.getElementById('streak-display').innerText = currentStreak;
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
 document.getElementById('display-height').innerText = pHeight;
-document.getElementById('display-jump').innerText = pJump;
+document.getElementById('display-jump').innerText = pJump.toFixed(1); // Показываем 1 знак после запятой
 document.getElementById('display-reach').innerText = pReach;
 document.getElementById('display-bg').innerText = pBg;
 document.getElementById('display-xp').innerText = currentXP;
@@ -106,13 +106,13 @@ if (refreshBtn) {
 const rimHeight = 305;
 const maxTouch = pReach + pJump;
 const needed = rimHeight - maxTouch;
-document.getElementById('calc-touch').innerText = maxTouch;
+document.getElementById('calc-touch').innerText = maxTouch.toFixed(1); // Округляем
 
 if (maxTouch >= rimHeight) {
     document.getElementById('calc-need').innerText = "0 (ТЫ ДОСТАЛ!)";
     document.getElementById('calc-need').style.color = "#00ff00";
 } else {
-    document.getElementById('calc-need').innerText = needed;
+    document.getElementById('calc-need').innerText = needed.toFixed(1);
 }
 
 // 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ
@@ -251,6 +251,12 @@ function showSuccessScreen() {
     document.getElementById('success-screen').classList.remove('hidden');
     tg.HapticFeedback.notificationOccurred('success');
     playSound('sound-win');
+
+    // --- ГЕНЕРАЦИЯ ВИЗУАЛЬНОГО ИМПАКТА ---
+    // Это число просто для анимации, реальное сохраняется ботом
+    const estGain = (Math.random() * (0.4 - 0.1) + 0.1).toFixed(2);
+    document.getElementById('jump-gain-display').innerText = `🚀 +${estGain} см к прыжку`;
+
     tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
     tg.MainButton.offClick(showSuccessScreen);
     tg.MainButton.onClick(sendDataAndClose);

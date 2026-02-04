@@ -192,6 +192,14 @@
             border: 1px solid var(--primary);
             box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
             animation: glow 2s infinite alternate;
+            margin-bottom: 10px;
+        }
+
+        /* НОВЫЙ СТИЛЬ ДЛЯ ПРИБАВКИ К ПРЫЖКУ */
+        .jump-reward {
+            color: #00ff00; font-size: 18px; font-weight: bold;
+            margin-top: 5px; text-shadow: 0 0 10px rgba(0,255,0,0.5);
+            animation: slideUpFade 1s ease 0.5s both; /* Появляется чуть позже */
         }
 
         @keyframes zoomIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
@@ -306,6 +314,9 @@
             <h1 class="success-title">Тренировка окончена!</h1>
             <p class="success-text">Отличная работа, атлет.</p>
             <div class="xp-reward">+50 XP</div>
+
+            <div id="jump-gain-display" class="jump-reward"></div>
+
             <p style="margin-top: 40px; font-size: 12px; opacity: 0.5;">Нажми кнопку внизу, чтобы сохранить прогресс</p>
         </div>
     </div>

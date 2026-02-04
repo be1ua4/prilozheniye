@@ -4,7 +4,8 @@ import logging
 import aiosqlite
 import urllib.parse
 import base64
-from datetime import datetime
+import random
+from datetime import datetime, timedelta
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
@@ -31,48 +32,60 @@ except ImportError:
 
 # --- ГЕНЕРАЦИЯ ТРЕНИРОВКИ (GigaChat) ---
 async def generate_ai_workout(height, weight, bg, goal):
-    # Если библиотека не установлена или нет ключа — возвращаем стандартную тренировку
-    if not HAS_GIGACHAT or "ЗДЕСЬ_ТВОЙ_КЛЮЧ" in GIGACHAT_KEY:
-        logging.warning("GigaChat не настроен. Использую стандартную программу.")
+    print(f"DEBUG: Начинаю генерацию для {bg}, {weight}кг...")  # ОТЛАДКА
+
+    # 1. Проверка библиотеки
+    if not HAS_GIGACHAT:
+        print("ОШИБКА: Библиотека gigachat не установлена!")
         return json.dumps([{"name": "Выпрыгивания", "sets": 3, "reps": 20}])
 
     try:
-        # Подключаемся к GigaChat
+        # 2. Попытка подключения
+        print("DEBUG: Подключаюсь к GigaChat...")
         chat = GigaChat(credentials=GIGACHAT_KEY, verify_ssl_certs=False)
 
+        # Логика сложности
+        intensity_desc = "низкая (разминка)"
+        min_total_reps = 100
+        if bg == "Intermediate":
+            intensity_desc = "средняя"
+            min_total_reps = 300
+        elif bg == "Advanced":
+            intensity_desc = "СМЕРТЕЛЬНАЯ"
+            min_total_reps = 600
+
+        # Промпт
         prompt = (
-            f"Ты профессиональный тренер по прыжкам. Составь ОДНУ персональную тренировку (на 1 день) "
-            f"для атлета с параметрами: Рост {height} см, Вес {weight} кг, Уровень {bg}, Цель: {goal}. "
-            f"Ответь СТРОГО в формате JSON без лишних слов и markdown. "
-            f"Формат: [{{'name': 'Название упражнения', 'sets': число_подходов, 'reps': число_повторений}}]. "
-            f"Используй ТОЛЬКО эти названия упражнений (можно комбинировать): "
-            f"Выпрыгивания, Зашагивания, Прыжки на икрах, Бёрнауты, Прыжки из приседа."
+            f"Роль: Ты жесткий тренер. Атлет: {height}см, {weight}кг, Уровень: {bg}.\n"
+            f"Интенсивность: {intensity_desc}. Минимум повторений всего: {min_total_reps}.\n"
+            f"Задача: Дай JSON план на 1 тренировку из упражнений: 'Выпрыгивания', 'Зашагивания', 'Прыжки на икрах', 'Бёрнауты'.\n"
+            f"Ответь ТОЛЬКО валидным JSON: [{{'name': '...', 'sets': 0, 'reps': 0}}]"
         )
 
+        # 3. Отправка запроса
+        print("DEBUG: Отправляю запрос в ИИ...")
         response = chat.chat(prompt)
         content = response.choices[0].message.content
+        print(f"DEBUG: Ответ ИИ: {content}")  # ПОКАЖЕТ ЧТО ОТВЕТИЛ РОБОТ
 
-        # Очистка ответа (иногда нейросеть пишет "Вот ваш json: [...]")
         start = content.find('[')
         end = content.rfind(']') + 1
         if start != -1 and end != -1:
-            clean_json = content[start:end]
-            return clean_json
+            return content[start:end]
         else:
-            raise ValueError("Не удалось найти JSON в ответе")
+            print("ОШИБКА: ИИ вернул не JSON!")
+            raise ValueError("Bad JSON")
 
     except Exception as e:
-        logging.error(f"AI Error: {e}")
-        # Fallback: Если ИИ ошибся, даем безопасную базу
-        return json.dumps([
-            {"name": "Выпрыгивания", "sets": 3, "reps": 15},
-            {"name": "Бёрнауты", "sets": 1, "reps": 100}
-        ])
+        print(f"КРИТИЧЕСКАЯ ОШИБКА GigaChat: {e}")
+        # Возвращаем заглушку, чтобы видеть что это ошибка
+        return json.dumps([{"name": "ОШИБКА ПОДКЛЮЧЕНИЯ", "sets": 0, "reps": 0}])
 
 
 # --- БАЗА ДАННЫХ ---
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
+        # ОБНОВЛЕННАЯ СТРУКТУРА: jump теперь REAL (для дробных чисел)
         await db.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
@@ -82,7 +95,7 @@ async def init_db():
                 xp INTEGER DEFAULT 0,
                 height INTEGER DEFAULT 0,
                 weight INTEGER DEFAULT 0,
-                jump INTEGER DEFAULT 0,
+                jump REAL DEFAULT 0,
                 reach INTEGER DEFAULT 0,
                 sport_bg TEXT DEFAULT 'Beginner',
                 goal TEXT DEFAULT 'Стать выше',
@@ -198,9 +211,26 @@ async def process_data(message: types.Message):
             await message.answer(f"✅ Профиль сохранен!\nGigaChat составил план под твои параметры 💪", reply_markup=kb)
 
         elif data.get("status") == "success":
-            async with db.execute("SELECT week, day, xp, streak, last_active FROM users WHERE user_id = ?",
-                                  (user_id,)) as cursor:
-                week, day, xp, streak, last_active = await cursor.fetchone()
+            async with db.execute(
+                    "SELECT week, day, xp, streak, last_active, sport_bg, jump FROM users WHERE user_id = ?",
+                    (user_id,)) as cursor:
+                week, day, xp, streak, last_active, sport_bg, current_jump = await cursor.fetchone()
+
+            # --- ЛОГИКА РАСЧЕТА ПРИРОСТА ПРЫЖКА ---
+            min_gain = 0.1
+            max_gain = 0.4
+
+            # Если профи - прирост меньше
+            if sport_bg == "Advanced":
+                min_gain = 0.01
+                max_gain = 0.15
+            elif sport_bg == "Intermediate":
+                min_gain = 0.05
+                max_gain = 0.25
+
+            jump_increase = round(random.uniform(min_gain, max_gain), 2)
+            new_jump = round(current_jump + jump_increase, 2)
+            # --------------------------------------
 
             today_str = datetime.now().strftime("%Y-%m-%d")
             new_streak = streak
@@ -217,17 +247,23 @@ async def process_data(message: types.Message):
             new_day = day + 1
             new_week = week
             bonus_xp = 50
-            msg = f"✅ День {day} выполнен! +{bonus_xp} XP\n🔥 Серия: {new_streak} дн."
+
+            msg = (f"✅ Тренировка завершена! +{bonus_xp} XP\n"
+                   f"📈 **Прыжок: +{jump_increase} см** (Всего: {new_jump} см)\n"
+                   f"🔥 Серия: {new_streak} дн.")
 
             if new_day > 3:
                 new_day = 1
                 new_week += 1
                 bonus_xp = 150
-                msg = f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\nПереход на уровень {new_week}.\nБонус +{bonus_xp} XP\n🔥 Серия: {new_streak} дн."
+                msg = (f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\n"
+                       f"📈 **Прыжок: +{jump_increase} см**\n"
+                       f"Бонус +{bonus_xp} XP\n🔥 Серия: {new_streak} дн.")
 
+            # Сохраняем НОВЫЙ JUMP в базу
             await db.execute(
-                "UPDATE users SET week=?, day=?, xp=xp+?, streak=?, last_active=?, username=? WHERE user_id=?",
-                (new_week, new_day, bonus_xp, new_streak, today_str, clean_username, user_id))
+                "UPDATE users SET week=?, day=?, xp=xp+?, streak=?, last_active=?, username=?, jump=? WHERE user_id=?",
+                (new_week, new_day, bonus_xp, new_streak, today_str, clean_username, new_jump, user_id))
             await db.commit()
 
             new_link = await create_app_link(user_id)
