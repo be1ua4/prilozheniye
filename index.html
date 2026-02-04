@@ -72,10 +72,25 @@
         .nav-icon { font-size: 20px; margin-bottom: 4px; }
 
         /* --- ТАЙМЕР И МОДАЛКИ --- */
-        .timer-modal { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1c1c1e; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transition: bottom 0.3s; text-align: center; border-top: 1px solid var(--primary); z-index: 2000; }
+        /* Увеличил высоту модалки, чтобы вместилась картинка */
+        .timer-modal {
+            position: fixed; bottom: -100%; left: 0; width: 100%;
+            background: #1c1c1e; border-radius: 20px 20px 0 0;
+            padding: 20px; box-sizing: border-box;
+            transition: bottom 0.3s; text-align: center;
+            border-top: 1px solid var(--primary); z-index: 2000;
+            display: flex; flex-direction: column; align-items: center; /* Центрирование */
+        }
         .timer-modal.active { bottom: 0; }
 
-        /* ВОТ ОНА, ПОТЕРЯННАЯ КНОПКА! */
+        /* Стиль для GIF/Картинки в таймере */
+        #exercise-gif {
+            width: 100%; max-width: 300px; height: 180px;
+            object-fit: cover; border-radius: 15px;
+            margin-bottom: 15px; background: #000;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
         .btn-skip {
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -174,6 +189,7 @@
     </nav>
 
     <div class="timer-modal" id="timerModal">
+        <img id="exercise-gif" src="" alt="Demo">
         <div class="timer-display" id="timerValue" style="font-size: 48px; font-weight: bold; margin: 20px 0;">01:00</div>
         <button class="btn-skip" onclick="stopTimer()">Пропустить</button>
     </div>

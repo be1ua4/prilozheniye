@@ -96,9 +96,25 @@ window.switchTab = function(tabId, element) {
 let timerInterval;
 function toggleTask(index) {
     const checkbox = document.getElementById(`check-${index}`);
+
     if (!checkbox.classList.contains('checked')) {
         checkbox.classList.add('checked');
         tg.HapticFeedback.impactOccurred('medium');
+
+        // --- ЛОГИКА ДЛЯ GIF ---
+        // 1. Узнаем имя упражнения
+        const exName = workout[index].name;
+        // 2. Достаем ссылку на GIF из базы
+        const gifUrl = exercisesDB[exName].gif;
+        // 3. Вставляем в картинку
+        const img = document.getElementById('exercise-gif');
+        if (gifUrl) {
+            img.src = gifUrl;
+            img.style.display = 'block';
+        } else {
+            img.style.display = 'none';
+        }
+
         startTimer(60);
     } else {
         checkbox.classList.remove('checked');
