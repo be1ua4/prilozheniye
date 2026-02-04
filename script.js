@@ -242,19 +242,6 @@ for (let w = 1; w <= TOTAL_WEEKS; w++) {
         </div>
     `;
 
-    // 6. Линии (Connector)
-    if (w > 1) {
-        const line = document.createElement('div');
-        line.className = 'path-connector';
-        line.style.top = "-50px"; // Тянемся вверх
-
-        if (posClass === 'pos-center') line.style.left = "50%";
-        if (posClass === 'pos-left') line.style.left = "30%";
-        if (posClass === 'pos-right') line.style.left = "70%";
-
-        mapContainer.appendChild(line);
-    }
-
     mapContainer.appendChild(row);
 
     // 7. Пузырь "ТУТ ТЫ" (добавляем программно, чтобы не ломать верстку строки)
