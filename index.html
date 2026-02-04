@@ -12,74 +12,59 @@
             --card-bg: rgba(255, 255, 255, 0.08);
             --text-main: #ffffff;
             --text-sec: #8b8b93;
-            --nav-height: 70px;
         }
-
         body {
             background-color: var(--bg-dark);
             background-image: radial-gradient(circle at top right, rgba(0, 242, 255, 0.15), transparent 40%);
             color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0; padding: 20px; padding-bottom: 100px; /* Отступ под меню */
+            margin: 0; padding: 20px; padding-bottom: 90px; /* Место под меню */
             min-height: 100vh; box-sizing: border-box;
         }
 
-        /* --- НАВИГАЦИЯ (НИЖНЕЕ МЕНЮ) --- */
-        .bottom-nav {
-            position: fixed; bottom: 20px; left: 20px; right: 20px;
-            height: 60px;
-            background: rgba(30, 30, 30, 0.85);
-            backdrop-filter: blur(12px);
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            display: flex; justify-content: space-around; align-items: center;
-            z-index: 1000;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        }
-        .nav-item {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: var(--text-sec); font-size: 10px; font-weight: 500;
-            cursor: pointer; transition: 0.3s;
-        }
-        .nav-item.active { color: var(--primary); transform: translateY(-2px); }
-        .nav-icon { font-size: 20px; margin-bottom: 4px; }
-
-        /* --- ВКЛАДКИ (Скрываем все, кроме активной) --- */
-        .tab-content { display: none; animation: fadeIn 0.3s ease; }
+        /* --- ВКЛАДКИ --- */
+        .tab-content { display: none; animation: fadeIn 0.3s; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- СТИЛИ ДЛЯ ТРЕНИРОВКИ (Старые) --- */
+        /* HEADER */
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .title h1 { margin: 0; font-size: 22px; }
         .title span { font-size: 13px; color: var(--primary); text-transform: uppercase; }
-        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 30px; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; box-shadow: 0 0 10px var(--primary); }
+
+        /* КАРТОЧКИ */
         .card { background: var(--card-bg); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; transition: 0.1s; }
         .card:active { transform: scale(0.98); }
         .card-left { display: flex; align-items: center; gap: 15px; }
         .icon-box { font-size: 24px; width: 40px; height: 40px; background: rgba(0,0,0,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
         .info h3 { margin: 0; font-size: 16px; }
         .info p { margin: 4px 0 0; font-size: 13px; color: var(--text-sec); }
+
+        /* ПРОГРЕСС И ЧЕКБОКСЫ */
+        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 30px; overflow: hidden; }
+        .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; box-shadow: 0 0 10px var(--primary); }
         .checkbox { width: 28px; height: 28px; border: 2px solid var(--text-sec); border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
         .checkbox.checked { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 15px rgba(0, 242, 255, 0.4); }
         .checkbox.checked::after { content: '✔'; color: #000; font-weight: bold; }
 
-        /* --- СТИЛИ ПРОФИЛЯ --- */
+        /* ПРОФИЛЬ И ТОП */
         .profile-card { text-align: center; padding: 30px; background: var(--card-bg); border-radius: 20px; margin-bottom: 20px; }
-        .avatar { font-size: 60px; margin-bottom: 10px; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; text-align: center; }
         .stat-val { font-size: 20px; font-weight: bold; color: var(--primary); }
         .stat-label { font-size: 12px; color: var(--text-sec); }
 
-        /* --- СТИЛИ ЛИДЕРБОРДА --- */
         .leader-row { display: flex; align-items: center; padding: 15px; background: var(--card-bg); margin-bottom: 8px; border-radius: 12px; }
         .rank { font-weight: bold; width: 30px; color: var(--primary); }
         .leader-info { flex-grow: 1; }
-        .xp-badge { background: rgba(0, 242, 255, 0.1); padding: 4px 8px; border-radius: 8px; font-size: 12px; color: var(--primary); }
 
-        /* Таймер */
+        /* МЕНЮ */
+        .bottom-nav { position: fixed; bottom: 20px; left: 20px; right: 20px; height: 60px; background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-sec); font-size: 10px; cursor: pointer; }
+        .nav-item.active { color: var(--primary); transform: translateY(-2px); }
+        .nav-icon { font-size: 20px; margin-bottom: 4px; }
+
+        /* ТАЙМЕР */
         .timer-modal { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1c1c1e; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transition: bottom 0.3s; text-align: center; border-top: 1px solid var(--primary); z-index: 2000; }
         .timer-modal.active { bottom: 0; }
         .timer-display { font-size: 48px; font-weight: bold; margin: 10px 0; font-variant-numeric: tabular-nums; }
@@ -101,42 +86,33 @@
     </div>
 
     <div id="tab-leaderboard" class="tab-content">
-        <h2 style="text-align: center;">Топ Атлетов 🏆</h2>
-        <p style="text-align: center; color: var(--text-sec); font-size: 13px;">Глобальный рейтинг (Демо)</p>
-
+        <h2 style="text-align: center;">Топ Атлетов</h2>
         <div class="leader-row">
             <div class="rank">1</div>
-            <div class="leader-info">
-                <div>Beast_Mode</div>
-                <small style="color:gray">Неделя 12</small>
-            </div>
-            <div class="xp-badge">5200 XP</div>
+            <div class="leader-info"><div>Beast_Mode</div><small style="color:gray">4500 XP</small></div>
+            <div>🥇</div>
         </div>
         <div class="leader-row">
             <div class="rank">2</div>
-            <div class="leader-info">
-                <div>Jumper_Pro</div>
-                <small style="color:gray">Неделя 9</small>
-            </div>
-            <div class="xp-badge">3800 XP</div>
+            <div class="leader-info"><div>Jumper</div><small style="color:gray">3200 XP</small></div>
+            <div>🥈</div>
         </div>
         <div class="leader-row" style="border: 1px solid var(--primary);">
             <div class="rank">3</div>
             <div class="leader-info">
                 <div id="leader-name">Вы</div>
-                <small style="color:gray">Неделя <span id="leader-week">1</span></small>
+                <small style="color:gray">Ваш текущий XP</small>
             </div>
-            <div class="xp-badge" id="leader-xp">0 XP</div>
+            <div id="leader-xp">0 XP</div>
         </div>
     </div>
 
     <div id="tab-profile" class="tab-content">
         <div class="profile-card">
-            <div class="avatar">👤</div>
-            <h2 id="profile-name">Имя</h2>
-            <p style="color: var(--primary);">Air Alert Program</p>
+            <div style="font-size: 60px; margin-bottom: 10px;">👤</div>
+            <h2 id="profile-name">Атлет</h2>
+            <p style="color: var(--primary);">Spirit of Power</p>
         </div>
-
         <div class="stats-grid">
             <div class="stat-box">
                 <div class="stat-val" id="profile-xp">0</div>
@@ -144,31 +120,28 @@
             </div>
             <div class="stat-box">
                 <div class="stat-val" id="profile-week">1</div>
-                <div class="stat-label">Текущая Неделя</div>
+                <div class="stat-label">Неделя</div>
             </div>
         </div>
     </div>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('tab-workout', this)">
+            <div class="nav-icon">💪</div><div>Work</div>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-leaderboard', this)">
+            <div class="nav-icon">🏆</div><div>Top</div>
+        </div>
+        <div class="nav-item" onclick="switchTab('tab-profile', this)">
+            <div class="nav-icon">👤</div><div>Me</div>
+        </div>
+    </nav>
 
     <div class="timer-modal" id="timerModal">
         <p style="opacity: 0.7; margin:0;">Отдых</p>
         <div class="timer-display" id="timerValue">01:00</div>
         <button class="btn-skip" onclick="stopTimer()">Пропустить</button>
     </div>
-
-    <nav class="bottom-nav">
-        <div class="nav-item active" onclick="switchTab('tab-workout', this)">
-            <div class="nav-icon">💪</div>
-            <div>Work</div>
-        </div>
-        <div class="nav-item" onclick="switchTab('tab-leaderboard', this)">
-            <div class="nav-icon">🏆</div>
-            <div>Top</div>
-        </div>
-        <div class="nav-item" onclick="switchTab('tab-profile', this)">
-            <div class="nav-icon">👤</div>
-            <div>Me</div>
-        </div>
-    </nav>
 
     <script src="data.js"></script>
     <script src="script.js"></script>

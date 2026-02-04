@@ -2,23 +2,20 @@ import asyncio
 import json
 import logging
 import aiosqlite
+import urllib.parse  # НУЖНО ДЛЯ КОДИРОВАНИЯ ИМЕНИ
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
-# ================= НАСТРОЙКИ =================
 TOKEN = "7590291969:AAGbIrhcgWLkcj0k3sRK_XiBsZPpmHrQin4"
-# Твоя ссылка на GitHub Pages
 WEBAPP_URL = "https://be1ua4.github.io/prilozheniye/"
 DB_NAME = "spirit.db"
-# =============================================
 
 dp = Dispatcher()
 
 
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
-        # Добавляем поле day (день внутри недели)
         await db.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
@@ -27,77 +24,73 @@ async def init_db():
                 xp INTEGER DEFAULT 0
             )
         ''')
-        # Если база старая и поля day нет, этот код может упасть.
-        # Лучше удалить файл spirit.db перед запуском новой версии!
         await db.commit()
 
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = message.from_user.id
-    username = message.from_user.first_name  # Берем имя для профиля
+    username = message.from_user.first_name or "Атлет"  # Если имени нет
 
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("INSERT OR IGNORE INTO users (user_id, week, day, xp) VALUES (?, 1, 1, 0)", (user_id,))
         await db.commit()
-
-        # Запрашиваем больше данных: XP и Week/Day
         async with db.execute("SELECT week, day, xp FROM users WHERE user_id = ?", (user_id,)) as cursor:
             row = await cursor.fetchone()
             week, day, xp = row if row else (1, 1, 0)
 
-    # ⚠️ ВАЖНО: Добавляем xp и name в ссылку
-    # Мы кодируем имя, чтобы русские буквы не сломали ссылку
-    import urllib.parse
+    # КОДИРУЕМ ИМЯ И ДОБАВЛЯЕМ XP В ССЫЛКУ
     safe_name = urllib.parse.quote(username)
-
     app_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}"
 
     kb = ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="🔥 Spirit App", web_app=WebAppInfo(url=app_link))]
+        [KeyboardButton(text="🔥 Начать тренировку", web_app=WebAppInfo(url=app_link))]
     ], resize_keyboard=True)
 
     await message.answer(
         f"🌪 **Spirit of Power**\n"
-        f"Твой уровень: {xp} XP\n"
-        "Залетай в приложение 👇",
-        reply_markup=kb
+        f"Неделя: {week} | День: {day}/3 | XP: {xp}\n"
+        "Жми кнопку 👇",
+        reply_markup=kb,
+        parse_mode="Markdown"
     )
 
 
 @dp.message(F.content_type == types.ContentType.WEB_APP_DATA)
 async def process_data(message: types.Message):
     data = json.loads(message.web_app_data.data)
-
     if data.get("status") == "success":
         user_id = message.from_user.id
-
         async with aiosqlite.connect(DB_NAME) as db:
-            # Получаем текущий прогресс
             async with db.execute("SELECT week, day, xp FROM users WHERE user_id = ?", (user_id,)) as cursor:
                 week, day, xp = await cursor.fetchone()
 
-            # Логика Air Alert (3 тренировки в неделю)
             new_day = day + 1
             new_week = week
-            msg_text = f"✅ День {day} выполнен! +50 XP"
+            bonus_xp = 50
+            msg = f"✅ День {day} выполнен! +{bonus_xp} XP"
 
-            if new_day > 3:  # Если сделали 3 дня, переходим на след неделю
+            if new_day > 3:
                 new_day = 1
                 new_week += 1
-                msg_text = f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\nПереход на уровень {new_week}."
+                bonus_xp = 150  # Бонус за неделю
+                msg = f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\nПереход на уровень {new_week}.\nБонус +{bonus_xp} XP"
 
-            await db.execute("UPDATE users SET week = ?, day = ?, xp = xp + 50 WHERE user_id = ?",
-                             (new_week, new_day, user_id))
+            await db.execute("UPDATE users SET week=?, day=?, xp=xp+? WHERE user_id=?",
+                             (new_week, new_day, bonus_xp, user_id))
             await db.commit()
 
-        # Обновляем кнопку
-        new_link = f"{WEBAPP_URL}?week={new_week}&day={new_day}"
-        kb = ReplyKeyboardMarkup(keyboard=[
-            [KeyboardButton(text="🔥 Следующая тренировка", web_app=WebAppInfo(url=new_link))]
-        ], resize_keyboard=True)
+            # Обновляем ссылку в кнопке (важно!)
+            username = message.from_user.first_name or "Атлет"
+            safe_name = urllib.parse.quote(username)
+            new_xp = xp + bonus_xp
+            new_link = f"{WEBAPP_URL}?week={new_week}&day={new_day}&xp={new_xp}&name={safe_name}"
 
-        await message.answer(msg_text, reply_markup=kb, parse_mode="Markdown")
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="🔥 Следующая тренировка", web_app=WebAppInfo(url=new_link))]
+            ], resize_keyboard=True)
+
+        await message.answer(msg, reply_markup=kb, parse_mode="Markdown")
 
 
 async def main():

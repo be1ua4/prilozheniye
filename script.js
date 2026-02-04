@@ -1,37 +1,36 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// 1. Парсинг параметров (Теперь берем и XP, и Имя)
+// 1. ПАРСИНГ ДАННЫХ ИЗ ССЫЛКИ
 const urlParams = new URLSearchParams(window.location.search);
 const currentWeek = parseInt(urlParams.get('week')) || 1;
 const currentDay = parseInt(urlParams.get('day')) || 1;
 const currentXP = parseInt(urlParams.get('xp')) || 0;
-// Декодируем имя из URL
-const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
+// Декодируем русское имя, если оно есть
+const rawName = urlParams.get('name');
+const userName = rawName ? decodeURIComponent(rawName) : 'Атлет';
 
-// 2. Инициализация UI
-// --- Вкладка Work ---
+// 2. ЗАПОЛНЕНИЕ ИНТЕРФЕЙСА
+// Вкладка Work
 document.getElementById('week-num').innerText = currentWeek;
 document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
 
-// --- Вкладка Profile ---
+// Вкладка Profile
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('profile-xp').innerText = currentXP;
 document.getElementById('profile-week').innerText = currentWeek;
 
-// --- Вкладка Leaderboard ---
+// Вкладка Leaderboard
 document.getElementById('leader-name').innerText = userName + " (Вы)";
-document.getElementById('leader-week').innerText = currentWeek;
 document.getElementById('leader-xp').innerText = currentXP + " XP";
 
-// Загрузка тренировки
+// 3. РЕНДЕР УПРАЖНЕНИЙ
 const workout = programs[currentWeek] || [];
 const list = document.getElementById('exercise-list');
 const progressBar = document.getElementById('progress');
 
-// 3. Рендер упражнений
 workout.forEach((ex, index) => {
-    const details = exercisesDB[ex.name] || { desc: "Делай красиво", icon: "🔥" };
+    const details = exercisesDB[ex.name] || { desc: "Делай технично", icon: "🔥" };
 
     const div = document.createElement('div');
     div.className = 'card';
@@ -50,21 +49,21 @@ workout.forEach((ex, index) => {
     list.appendChild(div);
 });
 
-// 4. Логика вкладок
+// 4. ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК (Обязательна!)
 window.switchTab = function(tabId, element) {
     // Скрываем все вкладки
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    // Убираем активный класс у кнопок
+    // Убираем подсветку у всех кнопок
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
 
-    // Показываем нужную
+    // Показываем выбранную
     document.getElementById(tabId).classList.add('active');
     element.classList.add('active');
 
-    tg.HapticFeedback.impactOccurred('light'); // Приятная вибрация при переключении
+    tg.HapticFeedback.impactOccurred('light'); // Вибрация
 }
 
-// 5. Логика выполнения (Таймер и прогресс)
+// 5. ЛОГИКА ВЫПОЛНЕНИЯ (ГАЛОЧКИ И ТАЙМЕР)
 let timerInterval;
 
 function toggleTask(index) {
@@ -95,7 +94,6 @@ function updateProgress() {
     }
 }
 
-// Таймер
 function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
     const display = document.getElementById('timerValue');
@@ -114,12 +112,11 @@ function startTimer(seconds) {
     }, 1000);
 }
 
-window.stopTimer = function() { // Делаем глобальной, чтобы работала из HTML
+window.stopTimer = function() {
     clearInterval(timerInterval);
     document.getElementById('timerModal').classList.remove('active');
 }
 
-// Отправка данных
 tg.MainButton.onClick(() => {
     const data = JSON.stringify({
         week: currentWeek,
