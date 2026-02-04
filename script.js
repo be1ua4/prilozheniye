@@ -308,41 +308,56 @@ window.toggleDuoTask = function(index, element) {
     startTimer(60);
 }
 
-// Перехватываем конец таймера, чтобы отметить "Выполнено"
-const originalStopTimer = window.stopTimer;
 window.stopTimer = function() {
-    originalStopTimer(); // Закрываем окно
+    // 1. Остановка таймера и закрытие окна
+    clearInterval(timerInterval);
+    document.getElementById('timerModal').classList.remove('active');
 
-    // Отмечаем выполненным
+    // 2. Логика Duolingo: Отмечаем уровень пройденным
     if (typeof window.currentTaskIndex !== 'undefined') {
         const idx = window.currentTaskIndex;
         const node = document.getElementById(`node-${idx}`);
         const checkbox = document.getElementById(`check-${idx}`);
 
+        // Если узел есть и он еще не "done"
         if (node && !node.classList.contains('done')) {
-            // 1. Ставим статус DONE
+            // А. Красим текущий в золотой
             node.classList.remove('active');
             node.classList.add('done');
 
-            // 2. Удаляем "пузырь" (Старт)
+            // Б. Убираем пузырь "СТАРТ"
             const bubble = node.querySelector('.speech-bubble');
             if (bubble) bubble.remove();
 
-            // 3. Отмечаем скрытый чекбокс (для прогресс-бара)
-            checkbox.classList.add('checked');
+            // В. Отмечаем скрытый чекбокс (чтобы ползла полоска прогресса сверху)
+            if (checkbox) checkbox.classList.add('checked');
 
-            // 4. Открываем СЛЕДУЮЩИЙ уровень
+            // Г. Открываем СЛЕДУЮЩИЙ уровень
             const nextIdx = idx + 1;
             const nextNode = document.getElementById(`node-${nextIdx}`);
+
             if (nextNode) {
-                nextNode.classList.add('active');
-                // Скроллим к нему плавно
-                nextNode.scrollIntoView({behavior: "smooth", block: "center"});
+                nextNode.classList.add('active'); // Делаем синим и пульсирующим
+
+                // Добавляем пузырь "GO" к следующему
+                const nextBubble = document.createElement('div');
+                nextBubble.className = 'speech-bubble';
+                nextBubble.innerText = 'GO!';
+                nextNode.appendChild(nextBubble);
+
+                // Плавный скролл к следующему заданию
+                setTimeout(() => {
+                    nextNode.scrollIntoView({behavior: "smooth", block: "center"});
+                }, 300);
             }
 
-            playSound('sound-win'); // Звук успеха уровня
-            updateProgress(); // Обновляем общий бар
+            // Д. Звук и обновление общего прогресса
+            playSound('sound-win');
+            updateProgress();
         }
+
+        // Сбрасываем индекс, чтобы случайно не завершить повторно
+        window.currentTaskIndex = undefined;
     }
 }
 
@@ -473,10 +488,6 @@ function startTimer(seconds) {
     }, 1000);
 }
 
-window.stopTimer = function() {
-    clearInterval(timerInterval);
-    document.getElementById('timerModal').classList.remove('active');
-}
 
 // --- НОВАЯ ФУНКЦИЯ: СВАЙП ДЛЯ ЗАКРЫТИЯ (SWIPE TO CLOSE) ---
 function enableSwipeToClose() {
