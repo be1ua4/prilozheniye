@@ -273,7 +273,16 @@
 
     <div id="onboarding-screen" class="hidden">
         <h1 style="text-align: center; margin-bottom: 20px;">Карточка Атлета 🪪</h1>
-        <div class="input-group"><label>Твоя цель</label><input type="text" id="in-goal" class="input-field" placeholder="Например: Данк двумя руками"></div>
+
+        <div class="input-group">
+            <label>Твоя цель</label>
+            <select id="in-goal" class="select-field">
+                <option value="Vertical Jump">Вертикальный прыжок 🚀</option>
+                <option value="Athleticism">Общий атлетизм 💪</option>
+                <option value="Broad Jump">Прыжок в длину 🐆</option>
+            </select>
+        </div>
+
         <div class="input-group">
             <label>Твой опыт</label>
             <select id="in-bg" class="select-field">

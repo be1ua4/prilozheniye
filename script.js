@@ -11,10 +11,10 @@ const pWeight = parseInt(urlParams.get('w')) || 0;
 const pJump = parseFloat(urlParams.get('j')) || 0; // Прыжок теперь float
 const pReach = parseInt(urlParams.get('r')) || 0;
 const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner');
-const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать легендой');
+const pGoal = decodeURIComponent(urlParams.get('goal') || 'Vertical Jump'); // Дефолт изменился
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 const currentStreak = parseInt(urlParams.get('streak')) || 0;
-const lastGain = parseFloat(urlParams.get('gain')) || 0; // НОВЫЙ ПАРАМЕТР
+const lastGain = parseFloat(urlParams.get('gain')) || 0;
 
 // --- ПОЛУЧЕНИЕ AI ПРОГРАММЫ ---
 let aiWorkout = null;
@@ -140,7 +140,7 @@ document.getElementById('rim-bar').style.height = `${barHeight}%`;
 window.refreshData = function() {
     tg.showPopup({
         title: 'Обновление данных',
-        message: 'Приложение перезагрузится для получения свежего рейтинга и программы. Продолжить?',
+        message: 'Приложение перезагрузится для получения свежего рейтинга. Продолжить?',
         buttons: [
             {id: 'ok', type: 'default', text: 'Да, обновить'},
             {id: 'cancel', type: 'cancel', text: 'Отмена'}
@@ -161,7 +161,7 @@ window.saveProfile = function() {
     const j = document.getElementById('in-jump').value;
     const r = document.getElementById('in-reach').value;
     const bg = document.getElementById('in-bg').value;
-    const goal = document.getElementById('in-goal').value;
+    const goal = document.getElementById('in-goal').value; // ТЕПЕРЬ ЭТО SELECT
 
     if(!h || !w || !goal || !r) {
         tg.showAlert("Заполни все поля, атлет!");
