@@ -1,15 +1,18 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// 1. ПАРСИНГ ПАРАМЕТРОВ
+// 1. ПАРСИНГ ПАРАМЕТРОВ (Теперь принимаем reach и bg)
 const urlParams = new URLSearchParams(window.location.search);
 const currentWeek = parseInt(urlParams.get('week')) || 1;
 const currentDay = parseInt(urlParams.get('day')) || 1;
 const currentXP = parseInt(urlParams.get('xp')) || 0;
-// Новые параметры
+
+// Новые параметры профиля
 const pHeight = parseInt(urlParams.get('h')) || 0;
 const pWeight = parseInt(urlParams.get('w')) || 0;
 const pJump = parseInt(urlParams.get('j')) || 0;
+const pReach = parseInt(urlParams.get('r')) || 0; // Касание стоя
+const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner'); // Опыт
 const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать легендой');
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 
@@ -17,6 +20,7 @@ const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 const totalWorkouts = ((currentWeek - 1) * 3) + (currentDay - 1);
 
 // 2. ПРОВЕРКА: ПОКАЗАТЬ АНКЕТУ ИЛИ ПРИЛОЖЕНИЕ?
+// Проверяем, заполнил ли он высоту касания и рост
 if (pHeight === 0 || pWeight === 0) {
     document.getElementById('onboarding-screen').classList.remove('hidden');
     document.getElementById('main-app').classList.add('hidden');
@@ -32,30 +36,45 @@ document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
 document.getElementById('display-height').innerText = pHeight;
-document.getElementById('display-weight').innerText = pWeight;
 document.getElementById('display-jump').innerText = pJump;
+document.getElementById('display-reach').innerText = pReach; // Показываем касание
+document.getElementById('display-bg').innerText = pBg; // Показываем опыт
 document.getElementById('display-xp').innerText = currentXP;
-document.getElementById('display-total-workouts').innerText = totalWorkouts;
 
 document.getElementById('leader-name').innerText = userName;
 document.getElementById('leader-xp').innerText = currentXP + " XP";
 
+// --- МАТЕМАТИКА ДАНКА ---
+const rimHeight = 305;
+const maxTouch = pReach + pJump; // Касание стоя + Прыжок
+const needed = rimHeight - maxTouch;
+
+document.getElementById('calc-touch').innerText = maxTouch;
+
+if (maxTouch >= rimHeight) {
+    document.getElementById('calc-need').innerText = "0 (ТЫ ДОСТАЛ!)";
+    document.getElementById('calc-need').style.color = "#00ff00";
+} else {
+    document.getElementById('calc-need').innerText = needed;
+}
 
 // 4. ФУНКЦИЯ СОХРАНЕНИЯ АНКЕТЫ
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
     const j = document.getElementById('in-jump').value;
+    const r = document.getElementById('in-reach').value; // Новое поле
+    const bg = document.getElementById('in-bg').value;   // Новое поле
     const goal = document.getElementById('in-goal').value;
 
-    if(!h || !w || !goal) {
+    if(!h || !w || !goal || !r) {
         tg.showAlert("Заполни все поля, атлет!");
         return;
     }
 
     const data = JSON.stringify({
         action: "save_profile",
-        h: h, w: w, j: j || 0, goal: goal
+        h: h, w: w, j: j || 0, r: r, bg: bg, goal: goal
     });
     tg.sendData(data);
 }
@@ -101,12 +120,9 @@ function toggleTask(index) {
         checkbox.classList.add('checked');
         tg.HapticFeedback.impactOccurred('medium');
 
-        // --- ЛОГИКА ДЛЯ GIF ---
-        // 1. Узнаем имя упражнения
+        // GIF
         const exName = workout[index].name;
-        // 2. Достаем ссылку на GIF из базы
         const gifUrl = exercisesDB[exName].gif;
-        // 3. Вставляем в картинку
         const img = document.getElementById('exercise-gif');
         if (gifUrl) {
             img.src = gifUrl;
@@ -122,8 +138,6 @@ function toggleTask(index) {
     updateProgress();
 }
 
-// --- ИЗМЕНЕННАЯ ЛОГИКА ЗАВЕРШЕНИЯ ---
-
 function updateProgress() {
     const total = workout.length;
     const done = document.querySelectorAll('.checkbox.checked').length;
@@ -135,7 +149,6 @@ function updateProgress() {
         tg.MainButton.textColor = "#000000";
         tg.MainButton.show();
 
-        // Снимаем все старые обработчики и ставим новый
         tg.MainButton.offClick(sendDataAndClose);
         tg.MainButton.offClick(showSuccessScreen);
         tg.MainButton.onClick(showSuccessScreen);

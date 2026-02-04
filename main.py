@@ -16,7 +16,7 @@ dp = Dispatcher()
 
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
-        # Добавляем новые поля: height, weight, jump, goal
+        # ОБНОВЛЕННАЯ СТРУКТУРА: добавили reach (касание) и sport_bg (опыт)
         await db.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
@@ -26,6 +26,8 @@ async def init_db():
                 height INTEGER DEFAULT 0,
                 weight INTEGER DEFAULT 0,
                 jump INTEGER DEFAULT 0,
+                reach INTEGER DEFAULT 0,
+                sport_bg TEXT DEFAULT 'Beginner',
                 goal TEXT DEFAULT 'Стать выше'
             )
         ''')
@@ -41,19 +43,20 @@ async def cmd_start(message: types.Message):
         await db.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
         await db.commit()
 
-        # Запрашиваем ВСЕ данные
-        async with db.execute("SELECT week, day, xp, height, weight, jump, goal FROM users WHERE user_id = ?",
+        # Запрашиваем ВСЕ данные, включая новые поля
+        async with db.execute("SELECT week, day, xp, height, weight, jump, reach, sport_bg, goal FROM users WHERE user_id = ?",
                               (user_id,)) as cursor:
             row = await cursor.fetchone()
-            # Распаковываем данные. Если данных нет, ставим 0
-            week, day, xp, height, weight, jump, goal = row if row else (1, 1, 0, 0, 0, 0, "Стать выше")
+            # Распаковка с учетом новых полей
+            week, day, xp, height, weight, jump, reach, sport_bg, goal = row if row else (1, 1, 0, 0, 0, 0, 0, "Beginner", "Стать выше")
 
-    # Кодируем строки для URL
+    # Кодируем строки
     safe_name = urllib.parse.quote(username)
     safe_goal = urllib.parse.quote(goal)
+    safe_bg = urllib.parse.quote(sport_bg)
 
-    # Формируем длинную ссылку со всеми параметрами
-    app_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={height}&w={weight}&j={jump}&goal={safe_goal}"
+    # Формируем ссылку со всеми параметрами (добавили reach и bg)
+    app_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={height}&w={weight}&j={jump}&r={reach}&bg={safe_bg}&goal={safe_goal}"
 
     kb = ReplyKeyboardMarkup(keyboard=[
         [KeyboardButton(text="🔥 Открыть Spirit App", web_app=WebAppInfo(url=app_link))]
@@ -78,23 +81,23 @@ async def process_data(message: types.Message):
 
         # СЦЕНАРИЙ 1: Сохранение профиля (Анкета)
         if data.get("action") == "save_profile":
-            # 1. Сохраняем в базу
-            await db.execute("UPDATE users SET height=?, weight=?, jump=?, goal=? WHERE user_id=?",
-                             (data['h'], data['w'], data['j'], data['goal'], user_id))
+            # Сохраняем новые поля
+            await db.execute("UPDATE users SET height=?, weight=?, jump=?, reach=?, sport_bg=?, goal=? WHERE user_id=?",
+                             (data['h'], data['w'], data['j'], data['r'], data['bg'], data['goal'], user_id))
             await db.commit()
 
-            # 2. Получаем актуальные данные (чтобы сформировать полную ссылку)
+            # Получаем актуальные данные для ссылки
             async with db.execute("SELECT week, day, xp FROM users WHERE user_id = ?", (user_id,)) as cursor:
                 week, day, xp = await cursor.fetchone()
 
-            # 3. Генерируем НОВУЮ ссылку с заполненными данными
+            # Генерируем новую ссылку
             username = message.from_user.first_name or "Атлет"
             safe_name = urllib.parse.quote(username)
             safe_goal = urllib.parse.quote(data['goal'])
+            safe_bg = urllib.parse.quote(data['bg'])
 
-            new_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={data['h']}&w={data['w']}&j={data['j']}&goal={safe_goal}"
+            new_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={data['h']}&w={data['w']}&j={data['j']}&r={data['r']}&bg={safe_bg}&goal={safe_goal}"
 
-            # 4. Отправляем кнопку
             kb = ReplyKeyboardMarkup(keyboard=[
                 [KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]
             ], resize_keyboard=True)
@@ -102,17 +105,18 @@ async def process_data(message: types.Message):
             await message.answer(
                 f"✅ **Профиль сохранен!**\n"
                 f"Цель: {data['goal']}\n"
+                f"Вертикальный прыжок: {data['j']} см\n"
                 f"Теперь нажми на новую кнопку ниже 👇",
                 reply_markup=kb,
                 parse_mode="Markdown"
             )
 
-        # СЦЕНАРИЙ 2: Завершение тренировки (Тут тоже надо передавать данные профиля, иначе они слетят)
+        # СЦЕНАРИЙ 2: Завершение тренировки
         elif data.get("status") == "success":
-            # Получаем ВСЕ данные, чтобы сохранить их в ссылке
-            async with db.execute("SELECT week, day, xp, height, weight, jump, goal FROM users WHERE user_id = ?",
+            # Получаем ВСЕ данные (включая новые), чтобы не потерять их
+            async with db.execute("SELECT week, day, xp, height, weight, jump, reach, sport_bg, goal FROM users WHERE user_id = ?",
                                   (user_id,)) as cursor:
-                week, day, xp, height, weight, jump, goal = await cursor.fetchone()
+                week, day, xp, height, weight, jump, reach, sport_bg, goal = await cursor.fetchone()
 
             new_day = day + 1
             new_week = week
@@ -129,13 +133,14 @@ async def process_data(message: types.Message):
                              (new_week, new_day, bonus_xp, user_id))
             await db.commit()
 
-            # Обновляем ссылку (сохраняем рост/вес в URL)
+            # Обновляем ссылку
             username = message.from_user.first_name or "Атлет"
             safe_name = urllib.parse.quote(username)
             safe_goal = urllib.parse.quote(goal)
+            safe_bg = urllib.parse.quote(sport_bg)
             new_xp = xp + bonus_xp
 
-            new_link = f"{WEBAPP_URL}?week={new_week}&day={new_day}&xp={new_xp}&name={safe_name}&h={height}&w={weight}&j={jump}&goal={safe_goal}"
+            new_link = f"{WEBAPP_URL}?week={new_week}&day={new_day}&xp={new_xp}&name={safe_name}&h={height}&w={weight}&j={jump}&r={reach}&bg={safe_bg}&goal={safe_goal}"
 
             kb = ReplyKeyboardMarkup(keyboard=[
                 [KeyboardButton(text="🔥 Следующая тренировка", web_app=WebAppInfo(url=new_link))]

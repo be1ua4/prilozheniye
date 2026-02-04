@@ -30,16 +30,17 @@
 
         /* --- ЭКРАН ЗНАКОМСТВА --- */
         #onboarding-screen {
-            display: flex; flex-direction: column; justify-content: center; height: 90vh;
+            display: flex; flex-direction: column; justify-content: center; min-height: 90vh;
         }
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; margin-bottom: 5px; color: var(--text-sec); font-size: 14px; }
-        .input-field {
+        .input-field, .select-field {
             width: 100%; padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
             background: rgba(0,0,0,0.3); color: white; font-size: 16px; box-sizing: border-box;
             outline: none; transition: 0.3s;
         }
-        .input-field:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 242, 255, 0.2); }
+        .select-field { appearance: none; }
+        .input-field:focus, .select-field:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 242, 255, 0.2); }
         .save-btn {
             background: var(--primary); color: #000; width: 100%; padding: 16px; border-radius: 12px;
             font-weight: bold; font-size: 16px; border: none; margin-top: 20px; cursor: pointer;
@@ -53,6 +54,12 @@
         .stat-val { font-size: 24px; font-weight: 800; color: var(--primary); display: block; }
         .stat-lbl { font-size: 12px; color: var(--text-sec); }
         .goal-card { background: linear-gradient(45deg, rgba(0,242,255,0.1), transparent); border: 1px solid var(--primary); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; }
+
+        /* Блок Данк-Калькулятора */
+        .dunk-calc-box {
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-top: 20px;
+            border-left: 3px solid var(--primary); text-align: left;
+        }
 
         /* --- КАРТОЧКИ --- */
         .card { background: var(--card-bg); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
@@ -72,18 +79,16 @@
         .nav-icon { font-size: 20px; margin-bottom: 4px; }
 
         /* --- ТАЙМЕР И МОДАЛКИ --- */
-        /* Увеличил высоту модалки, чтобы вместилась картинка */
         .timer-modal {
             position: fixed; bottom: -100%; left: 0; width: 100%;
             background: #1c1c1e; border-radius: 20px 20px 0 0;
             padding: 20px; box-sizing: border-box;
             transition: bottom 0.3s; text-align: center;
             border-top: 1px solid var(--primary); z-index: 2000;
-            display: flex; flex-direction: column; align-items: center; /* Центрирование */
+            display: flex; flex-direction: column; align-items: center;
         }
         .timer-modal.active { bottom: 0; }
 
-        /* Стиль для GIF/Картинки в таймере */
         #exercise-gif {
             width: 100%; max-width: 300px; height: 180px;
             object-fit: cover; border-radius: 15px;
@@ -132,13 +137,30 @@
 <body>
 
     <div id="onboarding-screen" class="hidden">
-        <h1 style="text-align: center; margin-bottom: 30px;">Карточка Атлета 🪪</h1>
+        <h1 style="text-align: center; margin-bottom: 20px;">Карточка Атлета 🪪</h1>
+
         <div class="input-group"><label>Твоя цель</label><input type="text" id="in-goal" class="input-field" placeholder="Например: Данк двумя руками"></div>
+
+        <div class="input-group">
+            <label>Твой опыт</label>
+            <select id="in-bg" class="select-field">
+                <option value="Beginner">Новичок (0-6 мес)</option>
+                <option value="Intermediate">Средний (6-12 мес)</option>
+                <option value="Advanced">Профи (>1 года)</option>
+            </select>
+        </div>
+
         <div class="stats-grid">
             <div class="input-group"><label>Рост (см)</label><input type="number" id="in-height" class="input-field" placeholder="180"></div>
             <div class="input-group"><label>Вес (кг)</label><input type="number" id="in-weight" class="input-field" placeholder="75"></div>
         </div>
-        <div class="input-group"><label>Текущий прыжок (см)</label><input type="number" id="in-jump" class="input-field" placeholder="50"></div>
+
+        <div class="stats-grid">
+            <div class="input-group"><label>Прыжок (см)</label><input type="number" id="in-jump" class="input-field" placeholder="50"></div>
+            <div class="input-group"><label>Касание стоя (см)</label><input type="number" id="in-reach" class="input-field" placeholder="230"></div>
+        </div>
+        <p style="font-size: 11px; color:gray; text-align:center;">*Касание стоя: подними руку у стены и отметь высоту</p>
+
         <button class="save-btn" onclick="saveProfile()">СОХРАНИТЬ ПРОФИЛЬ</button>
     </div>
 
@@ -166,11 +188,21 @@
             </div>
             <div class="stats-grid">
                 <div class="stat-card"><span class="stat-val" id="display-height">0</span><span class="stat-lbl">Рост</span></div>
-                <div class="stat-card"><span class="stat-val" id="display-weight">0</span><span class="stat-lbl">Вес</span></div>
                 <div class="stat-card"><span class="stat-val" id="display-jump">0</span><span class="stat-lbl">Прыжок</span></div>
-                <div class="stat-card"><span class="stat-val" id="display-total-workouts">0</span><span class="stat-lbl">Тренировок</span></div>
+                <div class="stat-card"><span class="stat-val" id="display-reach">0</span><span class="stat-lbl">Касание</span></div>
+                <div class="stat-card"><span class="stat-val" id="display-bg">Beginner</span><span class="stat-lbl">Опыт</span></div>
             </div>
-            <div class="stat-card" style="text-align: left; display: flex; justify-content: space-between;"><span>⚡ Всего XP</span><span id="display-xp" style="color:white; font-weight: bold;">0</span></div>
+
+            <div class="dunk-calc-box">
+                <div style="color:white; font-weight:bold; margin-bottom:5px;">🏀 Путь к Данку</div>
+                <div id="dunk-math" style="font-size:13px; color:var(--text-sec);">
+                    Кольцо: 305 см<br>
+                    Твой максимум: <span id="calc-touch" style="color:var(--primary)">0</span> см<br>
+                    Не хватает: <span id="calc-need" style="color:#ff4d4d">0</span> см
+                </div>
+            </div>
+
+            <div class="stat-card" style="text-align: left; display: flex; justify-content: space-between; margin-top:15px;"><span>⚡ Всего XP</span><span id="display-xp" style="color:white; font-weight: bold;">0</span></div>
         </div>
 
         <div id="success-screen" class="hidden">
