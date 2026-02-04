@@ -236,6 +236,34 @@
             color: #fff;
         }
 
+        /* --- СТИЛИ ДЛЯ ВКЛАДКИ JUMP --- */
+        .jump-header { text-align: center; margin-bottom: 20px; }
+        .jump-main-val { font-size: 48px; font-weight: 800; color: var(--primary); text-shadow: 0 0 20px rgba(0,242,255,0.3); }
+        .jump-gain-lbl { color: #00ff00; font-weight: bold; background: rgba(0,255,0,0.1); padding: 5px 10px; border-radius: 10px; display: inline-block; margin-top: 5px; }
+
+        .rim-visual {
+            position: relative; height: 300px; background: rgba(255,255,255,0.05);
+            border-radius: 16px; margin-top: 20px; border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+        .rim-line {
+            position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: #ff5722;
+            box-shadow: 0 0 10px #ff5722; z-index: 2;
+        }
+        .rim-text { position: absolute; top: 5px; right: 10px; color: #ff5722; font-size: 10px; font-weight: bold; }
+
+        .player-jump-bar {
+            position: absolute; bottom: 0; left: 20%; width: 60%;
+            background: linear-gradient(to top, var(--primary), #ffffff);
+            border-radius: 10px 10px 0 0;
+            transition: height 1s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: 0 0 20px rgba(0,242,255,0.3);
+        }
+        .player-val-text {
+            position: absolute; top: -25px; width: 100%; text-align: center;
+            font-weight: bold; color: white; font-size: 12px;
+        }
+
     </style>
 </head>
 <body>
@@ -287,6 +315,25 @@
             <button class="refresh-btn" onclick="refreshData()">🔄 Обновить таблицу</button>
         </div>
 
+        <div id="tab-jump" class="tab-content">
+            <h2 style="text-align: center;">Мой Прыжок</h2>
+            <div class="jump-header">
+                <div class="jump-main-val"><span id="jump-tab-val">0</span> см</div>
+                <div class="jump-gain-lbl" id="jump-tab-gain">+0.0 см</div>
+            </div>
+
+            <div class="rim-visual">
+                <div class="rim-line"><span class="rim-text">305 см (Кольцо)</span></div>
+                <div class="player-jump-bar" id="rim-bar">
+                    <div class="player-val-text">You</div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; font-size:12px; color:var(--text-sec); text-align:center;">
+                Прогресс рассчитывается на основе высоты касания + прыжка.
+            </div>
+        </div>
+
         <div id="tab-profile" class="tab-content">
             <div class="profile-header">
                 <span class="avatar-big">🥋</span><h2 id="profile-name">Атлет</h2>
@@ -324,6 +371,7 @@
     <nav class="bottom-nav" id="nav-bar">
         <div class="nav-item active" onclick="switchTab('tab-workout', this)"><div class="nav-icon">💪</div><div>Work</div></div>
         <div class="nav-item" onclick="switchTab('tab-leaderboard', this)"><div class="nav-icon">🏆</div><div>Top</div></div>
+        <div class="nav-item" onclick="switchTab('tab-jump', this)"><div class="nav-icon">🦘</div><div>Jump</div></div>
         <div class="nav-item" onclick="switchTab('tab-profile', this)"><div class="nav-icon">👤</div><div>Me</div></div>
     </nav>
 

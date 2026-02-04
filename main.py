@@ -85,7 +85,7 @@ async def generate_ai_workout(height, weight, bg, goal):
 # --- БАЗА ДАННЫХ ---
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
-        # ОБНОВЛЕННАЯ СТРУКТУРА: jump теперь REAL (для дробных чисел)
+        # ОБНОВЛЕННАЯ СТРУКТУРА: добавлено last_gain
         await db.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
@@ -100,7 +100,8 @@ async def init_db():
                 sport_bg TEXT DEFAULT 'Beginner',
                 goal TEXT DEFAULT 'Стать выше',
                 streak INTEGER DEFAULT 0,
-                last_active TEXT DEFAULT ''
+                last_active TEXT DEFAULT '',
+                last_gain REAL DEFAULT 0
             )
         ''')
         await db.commit()
@@ -121,15 +122,15 @@ async def get_top_users():
 # --- ГЕНЕРАЦИЯ ССЫЛКИ ---
 async def create_app_link(user_id):
     async with aiosqlite.connect(DB_NAME) as db:
+        # Запрашиваем last_gain
         async with db.execute(
-                "SELECT week, day, xp, height, weight, jump, reach, sport_bg, goal, streak, username FROM users WHERE user_id = ?",
+                "SELECT week, day, xp, height, weight, jump, reach, sport_bg, goal, streak, username, last_gain FROM users WHERE user_id = ?",
                 (user_id,)) as cursor:
             row = await cursor.fetchone()
             if not row: return None
-            week, day, xp, height, weight, jump, reach, sport_bg, goal, streak, username = row
+            week, day, xp, height, weight, jump, reach, sport_bg, goal, streak, username, last_gain = row
 
     # 1. Генерируем AI программу
-    # Если данных нет (0), ставим дефолтные для генерации
     h_val = height if height > 0 else 180
     w_val = weight if weight > 0 else 75
     ai_plan_json = await generate_ai_workout(h_val, w_val, sport_bg, goal)
@@ -144,7 +145,8 @@ async def create_app_link(user_id):
     top_leaders = await get_top_users()
     safe_leaders = urllib.parse.quote(top_leaders)
 
-    return f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={height}&w={weight}&j={jump}&r={reach}&bg={safe_bg}&goal={safe_goal}&streak={streak}&top={safe_leaders}&plan={safe_plan}"
+    # Добавляем &gain=
+    return f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={height}&w={weight}&j={jump}&r={reach}&bg={safe_bg}&goal={safe_goal}&streak={streak}&top={safe_leaders}&plan={safe_plan}&gain={last_gain}"
 
 
 @dp.message(Command("start"))
@@ -220,7 +222,6 @@ async def process_data(message: types.Message):
             min_gain = 0.1
             max_gain = 0.4
 
-            # Если профи - прирост меньше
             if sport_bg == "Advanced":
                 min_gain = 0.01
                 max_gain = 0.15
@@ -260,10 +261,10 @@ async def process_data(message: types.Message):
                        f"📈 **Прыжок: +{jump_increase} см**\n"
                        f"Бонус +{bonus_xp} XP\n🔥 Серия: {new_streak} дн.")
 
-            # Сохраняем НОВЫЙ JUMP в базу
+            # Сохраняем НОВЫЙ JUMP и LAST_GAIN в базу
             await db.execute(
-                "UPDATE users SET week=?, day=?, xp=xp+?, streak=?, last_active=?, username=?, jump=? WHERE user_id=?",
-                (new_week, new_day, bonus_xp, new_streak, today_str, clean_username, new_jump, user_id))
+                "UPDATE users SET week=?, day=?, xp=xp+?, streak=?, last_active=?, username=?, jump=?, last_gain=? WHERE user_id=?",
+                (new_week, new_day, bonus_xp, new_streak, today_str, clean_username, new_jump, jump_increase, user_id))
             await db.commit()
 
             new_link = await create_app_link(user_id)

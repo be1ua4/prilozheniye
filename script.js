@@ -14,6 +14,7 @@ const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner');
 const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать легендой');
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 const currentStreak = parseInt(urlParams.get('streak')) || 0;
+const lastGain = parseFloat(urlParams.get('gain')) || 0; // НОВЫЙ ПАРАМЕТР
 
 // --- ПОЛУЧЕНИЕ AI ПРОГРАММЫ ---
 let aiWorkout = null;
@@ -59,7 +60,7 @@ document.getElementById('streak-display').innerText = currentStreak;
 document.getElementById('profile-name').innerText = userName;
 document.getElementById('display-goal').innerText = pGoal;
 document.getElementById('display-height').innerText = pHeight;
-document.getElementById('display-jump').innerText = pJump.toFixed(1); // Показываем 1 знак после запятой
+document.getElementById('display-jump').innerText = pJump.toFixed(2);
 document.getElementById('display-reach').innerText = pReach;
 document.getElementById('display-bg').innerText = pBg;
 document.getElementById('display-xp').innerText = currentXP;
@@ -102,11 +103,12 @@ if (refreshBtn) {
 }
 
 
-// --- МАТЕМАТИКА ДАНКА ---
+// --- МАТЕМАТИКА ДАНКА & JUMP TAB ---
 const rimHeight = 305;
 const maxTouch = pReach + pJump;
 const needed = rimHeight - maxTouch;
-document.getElementById('calc-touch').innerText = maxTouch.toFixed(1); // Округляем
+
+document.getElementById('calc-touch').innerText = maxTouch.toFixed(1);
 
 if (maxTouch >= rimHeight) {
     document.getElementById('calc-need').innerText = "0 (ТЫ ДОСТАЛ!)";
@@ -114,6 +116,25 @@ if (maxTouch >= rimHeight) {
 } else {
     document.getElementById('calc-need').innerText = needed.toFixed(1);
 }
+
+// Заполняем вкладку JUMP
+document.getElementById('jump-tab-val').innerText = pJump.toFixed(2);
+if (lastGain > 0) {
+    document.getElementById('jump-tab-gain').innerText = `+${lastGain} см (посл. треня)`;
+} else {
+    document.getElementById('jump-tab-gain').innerText = "Тренируйся, чтобы расти!";
+    document.getElementById('jump-tab-gain').style.background = 'transparent';
+    document.getElementById('jump-tab-gain').style.color = '#8b8b93';
+}
+
+// Визуализация высоты (процент от кольца)
+// Допустим, 0% это касание стоя, 100% это кольцо
+const jumpProgress = Math.min((maxTouch / 305) * 100, 100);
+// Или лучше: отношение прыжка к нужному прыжку?
+// Сделаем просто высоту бара относительно 320см (чуть выше кольца)
+const barHeight = (maxTouch / 320) * 100;
+document.getElementById('rim-bar').style.height = `${barHeight}%`;
+
 
 // 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ
 window.refreshData = function() {
