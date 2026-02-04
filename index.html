@@ -207,6 +207,27 @@
             box-shadow: 0 0 10px rgba(255, 87, 34, 0.1);
         }
 
+        /* КНОПКА ОБНОВЛЕНИЯ ЛИДЕРБОРДА */
+        .refresh-btn {
+            background: transparent;
+            border: 1px solid var(--text-sec);
+            color: var(--text-sec);
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin-top: 20px;
+            width: 100%;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        .refresh-btn:active {
+            background: rgba(255,255,255,0.1);
+            border-color: #fff;
+            color: #fff;
+        }
+
     </style>
 </head>
 <body>
@@ -254,6 +275,8 @@
             <div class="card"><div class="card-left"><b>#1</b> Beast_Mode</div><div>5200 XP</div></div>
             <div class="card"><div class="card-left"><b>#2</b> Air_Jordan</div><div>4800 XP</div></div>
             <div class="card" style="border-color: var(--primary);"><div class="card-left"><b>Вы</b> <span id="leader-name"></span></div><div id="leader-xp"></div></div>
+
+            <button class="refresh-btn" onclick="refreshData()">🔄 Обновить таблицу</button>
         </div>
 
         <div id="tab-profile" class="tab-content">

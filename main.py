@@ -111,7 +111,36 @@ async def process_data(message: types.Message):
     clean_username = raw_username.replace(":", "").replace("|", "")
 
     async with aiosqlite.connect(DB_NAME) as db:
-        if data.get("action") == "save_profile":
+        # СЦЕНАРИЙ: Обновление (Кнопка Refresh)
+        if data.get("action") == "refresh":
+            # Просто читаем данные и отправляем новую ссылку
+            async with db.execute(
+                    "SELECT week, day, xp, height, weight, jump, reach, sport_bg, goal, streak FROM users WHERE user_id = ?",
+                    (user_id,)) as cursor:
+                week, day, xp, height, weight, jump, reach, sport_bg, goal, streak = await cursor.fetchone()
+
+            # Обновляем имя в базе на всякий случай
+            await db.execute("UPDATE users SET username=? WHERE user_id=?", (clean_username, user_id))
+            await db.commit()
+
+            # Получаем СВЕЖИЙ топ
+            top_leaders = await get_top_users()
+            safe_leaders = urllib.parse.quote(top_leaders)
+
+            safe_name = urllib.parse.quote(clean_username)
+            safe_goal = urllib.parse.quote(goal)
+            safe_bg = urllib.parse.quote(sport_bg)
+
+            new_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={height}&w={weight}&j={jump}&r={reach}&bg={safe_bg}&goal={safe_goal}&streak={streak}&top={safe_leaders}"
+
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]
+            ], resize_keyboard=True)
+
+            await message.answer("🔄 Таблица лидеров обновлена!", reply_markup=kb)
+
+        # СЦЕНАРИЙ 1: Сохранение профиля
+        elif data.get("action") == "save_profile":
             await db.execute(
                 "UPDATE users SET height=?, weight=?, jump=?, reach=?, sport_bg=?, goal=?, username=? WHERE user_id=?",
                 (data['h'], data['w'], data['j'], data['r'], data['bg'], data['goal'], clean_username, user_id))
@@ -136,6 +165,7 @@ async def process_data(message: types.Message):
 
             await message.answer(f"✅ Профиль сохранен!\nТеперь нажми кнопку ниже 👇", reply_markup=kb)
 
+        # СЦЕНАРИЙ 2: Завершение тренировки
         elif data.get("status") == "success":
             async with db.execute(
                     "SELECT week, day, xp, height, weight, jump, reach, sport_bg, goal, streak, last_active FROM users WHERE user_id = ?",

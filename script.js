@@ -47,7 +47,10 @@ document.getElementById('display-xp').innerText = currentXP;
 
 // --- ЗАПОЛНЕНИЕ ТАБЛИЦЫ ЛИДЕРОВ ---
 const leaderContainer = document.getElementById('tab-leaderboard');
-// Очищаем старые (фейковые) записи, оставляем только заголовок
+// Очищаем старые (фейковые) записи, оставляем только заголовок и кнопку
+// Находим кнопку, чтобы перенести ее вниз
+const refreshBtn = document.querySelector('.refresh-btn');
+
 leaderContainer.innerHTML = `
     <h2 style="text-align: center;">Топ Атлетов</h2>
     <p style="text-align: center; opacity: 0.5; font-size: 12px;">Глобальный рейтинг (Beta)</p>
@@ -72,6 +75,9 @@ leadersList.forEach((item, index) => {
     leaderContainer.appendChild(div);
 });
 
+// Возвращаем кнопку в конец
+if(refreshBtn) leaderContainer.appendChild(refreshBtn);
+
 
 // --- МАТЕМАТИКА ДАНКА ---
 const rimHeight = 305;
@@ -86,7 +92,14 @@ if (maxTouch >= rimHeight) {
     document.getElementById('calc-need').innerText = needed;
 }
 
-// 4. СОХРАНЕНИЕ ПРОФИЛЯ
+// 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ
+window.refreshData = function() {
+    tg.HapticFeedback.impactOccurred('light');
+    const data = JSON.stringify({ action: "refresh" });
+    tg.sendData(data);
+}
+
+// 5. СОХРАНЕНИЕ ПРОФИЛЯ
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
@@ -115,7 +128,7 @@ function playSound(id) {
     }
 }
 
-// 5. РЕНДЕР ТРЕНИРОВКИ
+// 6. РЕНДЕР ТРЕНИРОВКИ
 const workout = programs[currentWeek] || [];
 const list = document.getElementById('exercise-list');
 const progressBar = document.getElementById('progress');
@@ -138,7 +151,7 @@ workout.forEach((ex, index) => {
     list.appendChild(div);
 });
 
-// 6. ФУНКЦИИ ИНТЕРФЕЙСА
+// 7. ФУНКЦИИ ИНТЕРФЕЙСА
 window.switchTab = function(tabId, element) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
