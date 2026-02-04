@@ -2,13 +2,13 @@ import asyncio
 import json
 import logging
 import aiosqlite
-import urllib.parse  # НУЖНО ДЛЯ КОДИРОВАНИЯ ИМЕНИ
+import urllib.parse
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
-TOKEN = "7590291969:AAGbIrhcgWLkcj0k3sRK_XiBsZPpmHrQin4"
-WEBAPP_URL = "https://be1ua4.github.io/prilozheniye/"
+TOKEN = "7590291969:AAGbIrhcgWLkcj0k3sRK_XiBsZPpmHrQin4"  # Твой токен
+WEBAPP_URL = "https://be1ua4.github.io/prilozheniye/"  # Твоя ссылка
 DB_NAME = "spirit.db"
 
 dp = Dispatcher()
@@ -16,12 +16,17 @@ dp = Dispatcher()
 
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
+        # Добавляем новые поля: height, weight, jump, goal
         await db.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id INTEGER PRIMARY KEY,
                 week INTEGER DEFAULT 1,
                 day INTEGER DEFAULT 1,
-                xp INTEGER DEFAULT 0
+                xp INTEGER DEFAULT 0,
+                height INTEGER DEFAULT 0,
+                weight INTEGER DEFAULT 0,
+                jump INTEGER DEFAULT 0,
+                goal TEXT DEFAULT 'Стать выше'
             )
         ''')
         await db.commit()
@@ -30,27 +35,35 @@ async def init_db():
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = message.from_user.id
-    username = message.from_user.first_name or "Атлет"  # Если имени нет
+    username = message.from_user.first_name or "Атлет"
 
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("INSERT OR IGNORE INTO users (user_id, week, day, xp) VALUES (?, 1, 1, 0)", (user_id,))
+        await db.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
         await db.commit()
-        async with db.execute("SELECT week, day, xp FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            week, day, xp = row if row else (1, 1, 0)
 
-    # КОДИРУЕМ ИМЯ И ДОБАВЛЯЕМ XP В ССЫЛКУ
+        # Запрашиваем ВСЕ данные
+        async with db.execute("SELECT week, day, xp, height, weight, jump, goal FROM users WHERE user_id = ?",
+                              (user_id,)) as cursor:
+            row = await cursor.fetchone()
+            # Распаковываем данные. Если данных нет, ставим 0
+            week, day, xp, height, weight, jump, goal = row if row else (1, 1, 0, 0, 0, 0, "Стать выше")
+
+    # Кодируем строки для URL
     safe_name = urllib.parse.quote(username)
-    app_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}"
+    safe_goal = urllib.parse.quote(goal)
+
+    # Формируем длинную ссылку со всеми параметрами
+    app_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={height}&w={weight}&j={jump}&goal={safe_goal}"
 
     kb = ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="🔥 Начать тренировку", web_app=WebAppInfo(url=app_link))]
+        [KeyboardButton(text="🔥 Открыть Spirit App", web_app=WebAppInfo(url=app_link))]
     ], resize_keyboard=True)
 
     await message.answer(
         f"🌪 **Spirit of Power**\n"
-        f"Неделя: {week} | День: {day}/3 | XP: {xp}\n"
-        "Жми кнопку 👇",
+        f"Атлет: {username}\n"
+        f"Уровень: {xp} XP\n"
+        "Заходи в приложение 👇",
         reply_markup=kb,
         parse_mode="Markdown"
     )
@@ -59,9 +72,22 @@ async def cmd_start(message: types.Message):
 @dp.message(F.content_type == types.ContentType.WEB_APP_DATA)
 async def process_data(message: types.Message):
     data = json.loads(message.web_app_data.data)
-    if data.get("status") == "success":
-        user_id = message.from_user.id
-        async with aiosqlite.connect(DB_NAME) as db:
+    user_id = message.from_user.id
+
+    async with aiosqlite.connect(DB_NAME) as db:
+
+        # СЦЕНАРИЙ 1: Сохранение профиля (Анкета)
+        if data.get("action") == "save_profile":
+            await db.execute("UPDATE users SET height=?, weight=?, jump=?, goal=? WHERE user_id=?",
+                             (data['h'], data['w'], data['j'], data['goal'], user_id))
+            await db.commit()
+
+            # После сохранения профиля нужно дать новую кнопку с обновленными данными
+            # Для простоты просто пишем сообщение, пользователь перезайдет по /start или старой кнопке
+            await message.answer(f"✅ Профиль обновлен!\nЦель: {data['goal']}\nРост: {data['h']} см")
+
+        # СЦЕНАРИЙ 2: Завершение тренировки
+        elif data.get("status") == "success":
             async with db.execute("SELECT week, day, xp FROM users WHERE user_id = ?", (user_id,)) as cursor:
                 week, day, xp = await cursor.fetchone()
 
@@ -73,24 +99,17 @@ async def process_data(message: types.Message):
             if new_day > 3:
                 new_day = 1
                 new_week += 1
-                bonus_xp = 150  # Бонус за неделю
-                msg = f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\nПереход на уровень {new_week}.\nБонус +{bonus_xp} XP"
+                bonus_xp = 150
+                msg = f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\nПереход на уровень {new_week}."
 
             await db.execute("UPDATE users SET week=?, day=?, xp=xp+? WHERE user_id=?",
                              (new_week, new_day, bonus_xp, user_id))
             await db.commit()
 
-            # Обновляем ссылку в кнопке (важно!)
-            username = message.from_user.first_name or "Атлет"
-            safe_name = urllib.parse.quote(username)
-            new_xp = xp + bonus_xp
-            new_link = f"{WEBAPP_URL}?week={new_week}&day={new_day}&xp={new_xp}&name={safe_name}"
-
-            kb = ReplyKeyboardMarkup(keyboard=[
-                [KeyboardButton(text="🔥 Следующая тренировка", web_app=WebAppInfo(url=new_link))]
-            ], resize_keyboard=True)
-
-        await message.answer(msg, reply_markup=kb, parse_mode="Markdown")
+            # Для обновления кнопки после тренировки нам снова нужны данные профиля,
+            # чтобы не потерять их в URL. В идеале лучше делать отдельный API запрос,
+            # но пока оставим простую логику обновления через сообщение.
+            await message.answer(msg, parse_mode="Markdown")
 
 
 async def main():
