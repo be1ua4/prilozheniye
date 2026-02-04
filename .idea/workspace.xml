@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5972d855-6adf-4f16-bfd2-d54b1e1a4d1b" name="Changes" comment="1">
-      <change beforePath="$PROJECT_DIR$/spirit.db" beforeDir="false" afterPath="$PROJECT_DIR$/spirit.db" afterDir="false" />
-    </list>
+    <list default="true" id="5972d855-6adf-4f16-bfd2-d54b1e1a4d1b" name="Changes" comment="1" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -360,7 +358,15 @@
       <option name="project" value="LOCAL" />
       <updated>1770210691045</updated>
     </task>
-    <option name="localTasksCounter" value="33" />
+    <task id="LOCAL-00033" summary="1">
+      <option name="closed" value="true" />
+      <created>1770211183116</created>
+      <option name="number" value="00033" />
+      <option name="presentableId" value="LOCAL-00033" />
+      <option name="project" value="LOCAL" />
+      <updated>1770211183116</updated>
+    </task>
+    <option name="localTasksCounter" value="34" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
