@@ -15,9 +15,23 @@ const pGoal = decodeURIComponent(urlParams.get('goal') || 'Стать леген
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 const currentStreak = parseInt(urlParams.get('streak')) || 0;
 
-// --- ЛИДЕРБОРД (НОВОЕ) ---
+// --- ПОЛУЧЕНИЕ AI ПРОГРАММЫ ---
+let aiWorkout = null;
+try {
+    const rawPlan = urlParams.get('plan');
+    if (rawPlan) {
+        // Декодируем Base64 в JSON строку, затем в Объект
+        const jsonStr = atob(rawPlan); // atob декодирует base64
+        // Фикс для русских символов в base64
+        const fixedJson = decodeURIComponent(escape(jsonStr));
+        aiWorkout = JSON.parse(fixedJson);
+    }
+} catch (e) {
+    console.log("Ошибка парсинга плана:", e);
+}
+
+// --- ЛИДЕРБОРД ---
 const leadersRaw = decodeURIComponent(urlParams.get('top') || "");
-// Если список пуст, используем заглушку
 const leadersList = leadersRaw ? leadersRaw.split('|') : ["Beast:5000", "Machine:3000", "You:0"];
 
 // Вычисляем тренировки
@@ -35,6 +49,11 @@ if (pHeight === 0 || pWeight === 0) {
 // 3. ЗАПОЛНЕНИЕ ДАННЫХ
 document.getElementById('week-num').innerText = currentWeek;
 document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
+// Если план от ИИ - добавим пометку
+if (aiWorkout) {
+    document.getElementById('day-display').innerHTML += ` <span style="color:#0f0; font-size:10px; border:1px solid #0f0; padding:1px 4px; border-radius:4px;">AI</span>`;
+}
+
 document.getElementById('streak-display').innerText = currentStreak;
 
 document.getElementById('profile-name').innerText = userName;
@@ -47,8 +66,6 @@ document.getElementById('display-xp').innerText = currentXP;
 
 // --- ЗАПОЛНЕНИЕ ТАБЛИЦЫ ЛИДЕРОВ ---
 const leaderContainer = document.getElementById('tab-leaderboard');
-// Очищаем старые (фейковые) записи, оставляем только заголовок и кнопку
-// Находим кнопку, чтобы перенести ее вниз
 const refreshBtn = document.querySelector('.refresh-btn');
 
 leaderContainer.innerHTML = `
@@ -62,7 +79,6 @@ leadersList.forEach((item, index) => {
 
     const div = document.createElement('div');
     div.className = 'card';
-    // Если это я - подсвечиваем рамкой
     if (isMe) div.style.borderColor = 'var(--primary)';
 
     div.innerHTML = `
@@ -75,8 +91,15 @@ leadersList.forEach((item, index) => {
     leaderContainer.appendChild(div);
 });
 
-// Возвращаем кнопку в конец
-if(refreshBtn) leaderContainer.appendChild(refreshBtn);
+if (refreshBtn) {
+    leaderContainer.appendChild(refreshBtn);
+} else {
+    const btn = document.createElement('button');
+    btn.className = 'refresh-btn';
+    btn.innerText = '🔄 Обновить таблицу';
+    btn.onclick = window.refreshData;
+    leaderContainer.appendChild(btn);
+}
 
 
 // --- МАТЕМАТИКА ДАНКА ---
@@ -92,11 +115,11 @@ if (maxTouch >= rimHeight) {
     document.getElementById('calc-need').innerText = needed;
 }
 
-// 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ (С ПОДТВЕРЖДЕНИЕМ)
+// 4. ФУНКЦИЯ ОБНОВЛЕНИЯ ДАННЫХ
 window.refreshData = function() {
     tg.showPopup({
-        title: 'Обновление рейтинга',
-        message: 'Приложение перезагрузится, чтобы получить свежие данные от бота. Продолжить?',
+        title: 'Обновление данных',
+        message: 'Приложение перезагрузится для получения свежего рейтинга и программы. Продолжить?',
         buttons: [
             {id: 'ok', type: 'default', text: 'Да, обновить'},
             {id: 'cancel', type: 'cancel', text: 'Отмена'}
@@ -109,6 +132,7 @@ window.refreshData = function() {
         }
     });
 }
+
 // 5. СОХРАНЕНИЕ ПРОФИЛЯ
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
@@ -138,19 +162,26 @@ function playSound(id) {
     }
 }
 
-// 6. РЕНДЕР ТРЕНИРОВКИ
-const workout = programs[currentWeek] || [];
+// 6. РЕНДЕР ТРЕНИРОВКИ (УМНАЯ ЛОГИКА)
+// Если есть AI программа - берем её. Если нет - берем из data.js
+const workout = aiWorkout || programs[currentWeek] || [];
+
 const list = document.getElementById('exercise-list');
 const progressBar = document.getElementById('progress');
 
+// Очистка списка перед рендером
+list.innerHTML = "";
+
 workout.forEach((ex, index) => {
-    const details = exercisesDB[ex.name] || { desc: "...", icon: "🔥" };
+    // Если описание есть в БД упражнений - берем оттуда, иначе ставим заглушку
+    const dbData = exercisesDB[ex.name] || { desc: "Упражнение от тренера", icon: "🤖", gif: "" };
+
     const div = document.createElement('div');
     div.className = 'card';
     div.onclick = () => toggleTask(index);
     div.innerHTML = `
         <div class="card-left">
-            <div class="icon-box">${details.icon}</div>
+            <div class="icon-box">${dbData.icon}</div>
             <div class="info">
                 <h3>${ex.name}</h3>
                 <p>${ex.sets} x ${ex.reps}</p>
@@ -178,8 +209,11 @@ function toggleTask(index) {
         tg.HapticFeedback.impactOccurred('medium');
         playSound('sound-click');
 
+        // Получаем GIF из базы упражнений
         const exName = workout[index].name;
-        const gifUrl = exercisesDB[exName].gif;
+        const dbData = exercisesDB[exName];
+        const gifUrl = dbData ? dbData.gif : "";
+
         const img = document.getElementById('exercise-gif');
         if (gifUrl) {
             img.src = gifUrl;
