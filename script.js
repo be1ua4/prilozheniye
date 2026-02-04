@@ -334,6 +334,7 @@ function renderDailyExercises(workoutData) {
 }
 
 // Клик по упражнению в списке
+// Клик по упражнению в списке
 window.toggleTaskInModal = function(index) {
     const checkbox = document.getElementById(`modal-check-${index}`);
 
@@ -353,10 +354,15 @@ window.toggleTaskInModal = function(index) {
 
         startTimer(60); // Запуск таймера
     } else {
-        // Если уже сделано -> Снимаем галочку (если случайно нажали)
+        // Если уже сделано -> Снимаем галочку
         checkbox.classList.remove('checked');
     }
-    updateModalProgress();
+
+    // 🔥 ИСПРАВЛЕНИЕ 1: Небольшая задержка перед обновлением прогресса.
+    // Это дает браузеру время обработать клик перед тем, как рисовать кнопку.
+    setTimeout(() => {
+        updateModalProgress();
+    }, 50);
 }
 
 function updateModalProgress() {
@@ -460,8 +466,19 @@ function startTimer(seconds) {
 window.stopTimer = function() {
     clearInterval(timerInterval);
     document.getElementById('timerModal').classList.remove('active');
-}
 
+    // 🔥 ИСПРАВЛЕНИЕ 2: Принудительно проверяем прогресс при закрытии таймера
+    // Если это было последнее упражнение, кнопка появится прямо сейчас.
+    setTimeout(() => {
+        updateModalProgress();
+
+        // Если кнопка появилась, плавно скроллим к ней, чтобы атлет её увидел
+        const finishBtn = document.getElementById('modal-finish-btn-area');
+        if (finishBtn && finishBtn.innerHTML !== "") {
+            finishBtn.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+    }, 100);
+}
 // Переключение вкладок меню
 window.switchTab = function(tabId, element) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
