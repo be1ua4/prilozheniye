@@ -24,7 +24,7 @@ else:
     print("💻 LOG: Работаю с локальной базой")
 
 GIGACHAT_KEY = "MDE5YzBhOTQtZDYwMi03ODQzLTk5OTAtYTNmNGQ0MWEzODc1OjAyMjVkZDM5LTEzN2QtNDQzMS04NDE0LWM2MmQyNjA0MzEwNw=="
-ADMIN_IDS = [941369221]  # Замените на свой ID
+ADMIN_IDS = [941369221]  # Ваш ID
 
 dp = Dispatcher()
 
@@ -123,43 +123,59 @@ async def init_db():
 
 
 # --- СОЗДАНИЕ ССЫЛКИ ---
-async def create_app_link(user_id, force_new=False):
-    async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
+async def create_app_link(user_id, db, force_new=False):
+    # Получаем данные пользователя (ВСЕ ПОЛЯ)
+    async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
+        row = await cursor.fetchone()
 
-        if not row: return None
+    if not row: return None
 
-        # Распаковка (индексы колонок в таблице)
-        week, day = row[2], row[3]
-        current_plan, plan_date = row[14], row[15]
-        today_str = datetime.now().strftime("%Y-%m-%d")
+    # 🔥 1. ВОССТАНОВЛЕННЫЙ БЛОК ЛИДЕРБОРДА 🔥
+    leaders_str = ""
+    try:
+        async with db.execute("SELECT username, xp FROM users ORDER BY xp DESC LIMIT 10") as cursor:
+            leaders_data = await cursor.fetchall()
 
-        # Логика генерации (если плана нет или новый день)
-        if (not current_plan) or (plan_date != today_str) or force_new:
-            print(f"LOG: Генерирую план для {user_id}")
-            h = row[5] if row[5] > 0 else 180
-            w = row[6] if row[6] > 0 else 75
+        leaders_list = []
+        for r in leaders_data:
+            name = r[0] if r[0] else "Атлет"
+            leaders_list.append(f"{name}:{r[1]}")
+        leaders_str = "|".join(leaders_list)
+    except Exception as e:
+        print(f"Leaderboard error: {e}")
 
-            ai_plan_json = await generate_ai_workout(h, w, row[9], row[10], week, day)
+    # 2. ДАННЫЕ ЮЗЕРА
+    week, day = row[2], row[3]
+    current_plan, plan_date = row[14], row[15]
+    today_str = datetime.now().strftime("%Y-%m-%d")
 
-            await db.execute("UPDATE users SET current_plan=?, plan_date=? WHERE user_id=?",
-                             (ai_plan_json, today_str, user_id))
-            await db.commit()
-        else:
-            print("LOG: План из кэша")
-            ai_plan_json = current_plan
+    # 3. ЛОГИКА ПЛАНА
+    if (not current_plan) or (plan_date != today_str) or force_new:
+        print(f"LOG: Генерирую план для {user_id}")
+        h = row[5] if row[5] > 0 else 180
+        w = row[6] if row[6] > 0 else 75
 
-        safe_plan = base64.b64encode(ai_plan_json.encode('utf-8')).decode('utf-8')
+        ai_plan_json = await generate_ai_workout(h, w, row[9], row[10], week, day)
 
-        params = {
-            'week': week, 'day': day, 'xp': row[4],
-            'name': row[1] or "Атлет",
-            'h': row[5], 'w': row[6], 'j': row[7], 'r': row[8],
-            'bg': row[9], 'goal': row[10], 'streak': row[11],
-            'gain': row[13], 'plan': safe_plan
-        }
-        return f"{WEBAPP_URL}?{urllib.parse.urlencode(params)}"
+        await db.execute("UPDATE users SET current_plan=?, plan_date=? WHERE user_id=?",
+                         (ai_plan_json, today_str, user_id))
+        await db.commit()
+    else:
+        print("LOG: План из кэша")
+        ai_plan_json = current_plan
+
+    safe_plan = base64.b64encode(ai_plan_json.encode('utf-8')).decode('utf-8')
+
+    # 4. СБОРКА ССЫЛКИ (ТЕПЕРЬ С TOP)
+    params = {
+        'week': week, 'day': day, 'xp': row[4],
+        'name': row[1] or "Атлет",
+        'h': row[5], 'w': row[6], 'j': row[7], 'r': row[8],
+        'bg': row[9], 'goal': row[10], 'streak': row[11],
+        'gain': row[13], 'plan': safe_plan,
+        'top': leaders_str  # <-- ВЕРНУЛИ
+    }
+    return f"{WEBAPP_URL}?{urllib.parse.urlencode(params)}"
 
 
 # --- ХЕНДЛЕРЫ ---
@@ -177,7 +193,8 @@ async def cmd_start(message: types.Message):
             res = await c.fetchone()
             streak = res[0] if res else 0
 
-    link = await create_app_link(user_id)
+        link = await create_app_link(user_id, db)
+
     kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Открыть Spirit App", web_app=WebAppInfo(url=link))]],
                              resize_keyboard=True)
     await message.answer(f"🌪 **Spirit of Power**\nАтлет: {username}\nСерия: {streak} 🔥\nТренер: AI 🧠", reply_markup=kb,
@@ -210,10 +227,10 @@ async def process_data(message: types.Message):
         await db.commit()
 
         if data.get("action") == "refresh":
-            pass
+            pass  # Обновим ссылку ниже
 
         elif data.get("action") == "generate_ai":
-            link = await create_app_link(user_id, force_new=True)
+            link = await create_app_link(user_id, db, force_new=True)
             kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
                                      resize_keyboard=True)
             await message.answer("🧠 План перестроен!", reply_markup=kb)
@@ -225,101 +242,71 @@ async def process_data(message: types.Message):
                               data['goal'], user_id))
             await db.commit()
 
-            link = await create_app_link(user_id, force_new=True)
+            link = await create_app_link(user_id, db, force_new=True)
             kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
                                      resize_keyboard=True)
             await message.answer("✅ Профиль сохранен!", reply_markup=kb)
             return
 
-
         elif data.get("status") == "success":
-
-            async with db.execute(
-                    "SELECT week, day, xp, streak, last_active, sport_bg, jump FROM users WHERE user_id=?",
-                    (user_id,)) as c:
-
+            async with db.execute("SELECT * FROM users WHERE user_id=?", (user_id,)) as c:
                 row = await c.fetchone()
 
-            # --- ПОЛУЧАЕМ ТОЧНЫЙ РАСЧЕТ ИЗ WEBAPP ---
+            if not row: return
 
-            # Бот теперь доверяет клиенту, чтобы цифры совпадали
+            # --- УМНАЯ КАЛИБРОВКА (Данные от клиента) ---
+            real_gain = float(data.get("gain", 0.1))
 
-            real_gain = float(data.get("gain", 0.1))  # Если вдруг пусто, берем 0.1
-
-            # Текущие данные
-
-            current_jump = row[6]
-
+            # Данные из базы
+            current_jump = row[7]  # jump
             new_jump = round(current_jump + real_gain, 2)
 
-            # Логика календаря и стриков
-
+            # Логика календаря
             today = datetime.now().date()
-
-            last_active_str = row[4]
-
-            current_streak_val = row[3]
+            last_active_str = row[12]
+            current_streak_val = row[11]
 
             new_streak = current_streak_val
-
             if last_active_str:
-
                 try:
-
                     last_date = datetime.strptime(last_active_str, "%Y-%m-%d").date()
-
                     days_diff = (today - last_date).days
-
                     if days_diff == 1:
                         new_streak += 1
-
                     elif days_diff > 1:
                         new_streak = 1
-
                 except:
                     pass
-
             else:
-
                 new_streak = 1
 
-            new_day, new_week = row[1] + 1, row[0]
-
+            new_day, new_week = row[3] + 1, row[2]
             bonus_xp = 50
 
-            # Сообщение (теперь цифры 100% совпадут)
-
             msg = (f"✅ Тренировка завершена! +50 XP\n"
-
                    f"📈 **Прыжок: +{real_gain} см** (Всего: {new_jump})")
 
             if new_day > 3:
-                new_day, new_week = 1, row[0] + 1
-
-                msg += f"\n🏆 **НЕДЕЛЯ {row[0]} ЗАКРЫТА!**"
-
-            # Сохранение в БД
+                new_day, new_week = 1, row[2] + 1
+                msg += f"\n🏆 **НЕДЕЛЯ {row[2]} ЗАКРЫТА!**"
 
             await db.execute(
                 "UPDATE users SET week=?, day=?, xp=xp+50, streak=?, last_active=?, jump=?, last_gain=?, current_plan='' WHERE user_id=?",
-
                 (new_week, new_day, new_streak, str(today), new_jump, real_gain, user_id))
-
             await db.commit()
 
             link = await create_app_link(user_id, db)
-
             kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Следующая", web_app=WebAppInfo(url=link))]],
                                      resize_keyboard=True)
-
             await message.answer(msg, reply_markup=kb, parse_mode="Markdown")
-
             return
-    # Дефолтный ответ
-    link = await create_app_link(user_id)
-    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
-                             resize_keyboard=True)
-    await message.answer("Данные обновлены", reply_markup=kb)
+
+        # 🔥 ИСПРАВЛЕНИЕ: Этот блок теперь ВНУТРИ async with
+        # Дефолтный ответ
+        link = await create_app_link(user_id, db)
+        kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
+                                 resize_keyboard=True)
+        await message.answer("Данные обновлены", reply_markup=kb)
 
 
 async def main():
