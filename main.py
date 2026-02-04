@@ -78,18 +78,41 @@ async def process_data(message: types.Message):
 
         # СЦЕНАРИЙ 1: Сохранение профиля (Анкета)
         if data.get("action") == "save_profile":
+            # 1. Сохраняем в базу
             await db.execute("UPDATE users SET height=?, weight=?, jump=?, goal=? WHERE user_id=?",
                              (data['h'], data['w'], data['j'], data['goal'], user_id))
             await db.commit()
 
-            # После сохранения профиля нужно дать новую кнопку с обновленными данными
-            # Для простоты просто пишем сообщение, пользователь перезайдет по /start или старой кнопке
-            await message.answer(f"✅ Профиль обновлен!\nЦель: {data['goal']}\nРост: {data['h']} см")
-
-        # СЦЕНАРИЙ 2: Завершение тренировки
-        elif data.get("status") == "success":
+            # 2. Получаем актуальные данные (чтобы сформировать полную ссылку)
             async with db.execute("SELECT week, day, xp FROM users WHERE user_id = ?", (user_id,)) as cursor:
                 week, day, xp = await cursor.fetchone()
+
+            # 3. Генерируем НОВУЮ ссылку с заполненными данными
+            username = message.from_user.first_name or "Атлет"
+            safe_name = urllib.parse.quote(username)
+            safe_goal = urllib.parse.quote(data['goal'])
+
+            new_link = f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={data['h']}&w={data['w']}&j={data['j']}&goal={safe_goal}"
+
+            # 4. Отправляем кнопку
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]
+            ], resize_keyboard=True)
+
+            await message.answer(
+                f"✅ **Профиль сохранен!**\n"
+                f"Цель: {data['goal']}\n"
+                f"Теперь нажми на новую кнопку ниже 👇",
+                reply_markup=kb,
+                parse_mode="Markdown"
+            )
+
+        # СЦЕНАРИЙ 2: Завершение тренировки (Тут тоже надо передавать данные профиля, иначе они слетят)
+        elif data.get("status") == "success":
+            # Получаем ВСЕ данные, чтобы сохранить их в ссылке
+            async with db.execute("SELECT week, day, xp, height, weight, jump, goal FROM users WHERE user_id = ?",
+                                  (user_id,)) as cursor:
+                week, day, xp, height, weight, jump, goal = await cursor.fetchone()
 
             new_day = day + 1
             new_week = week
@@ -106,10 +129,19 @@ async def process_data(message: types.Message):
                              (new_week, new_day, bonus_xp, user_id))
             await db.commit()
 
-            # Для обновления кнопки после тренировки нам снова нужны данные профиля,
-            # чтобы не потерять их в URL. В идеале лучше делать отдельный API запрос,
-            # но пока оставим простую логику обновления через сообщение.
-            await message.answer(msg, parse_mode="Markdown")
+            # Обновляем ссылку (сохраняем рост/вес в URL)
+            username = message.from_user.first_name or "Атлет"
+            safe_name = urllib.parse.quote(username)
+            safe_goal = urllib.parse.quote(goal)
+            new_xp = xp + bonus_xp
+
+            new_link = f"{WEBAPP_URL}?week={new_week}&day={new_day}&xp={new_xp}&name={safe_name}&h={height}&w={weight}&j={jump}&goal={safe_goal}"
+
+            kb = ReplyKeyboardMarkup(keyboard=[
+                [KeyboardButton(text="🔥 Следующая тренировка", web_app=WebAppInfo(url=new_link))]
+            ], resize_keyboard=True)
+
+            await message.answer(msg, reply_markup=kb, parse_mode="Markdown")
 
 
 async def main():

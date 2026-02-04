@@ -72,6 +72,23 @@
 
         .timer-modal { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1c1c1e; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transition: bottom 0.3s; text-align: center; border-top: 1px solid var(--primary); z-index: 2000; }
         .timer-modal.active { bottom: 0; }
+
+        /* ИСПРАВЛЕНИЕ 1: ДОБАВЛЕНА СКОБКА } */
+        #success-screen {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 80vh; text-align: center;
+            animation: fadeIn 0.5s;
+        }
+        .success-icon { font-size: 80px; margin-bottom: 20px; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .success-title { font-size: 28px; font-weight: bold; margin: 0 0 10px 0; }
+        .success-text { color: var(--text-sec); margin-bottom: 30px; }
+        .xp-reward {
+            background: rgba(0, 242, 255, 0.15); color: var(--primary);
+            padding: 10px 20px; border-radius: 12px; font-weight: bold; font-size: 20px;
+            border: 1px solid var(--primary);
+        }
+        @keyframes popIn { 0% { transform: scale(0); } 80% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
     </style>
 </head>
 <body>
@@ -158,6 +175,18 @@
                 <span id="display-xp" style="color:white; font-weight: bold;">0</span>
             </div>
         </div>
+
+        <div id="success-screen" class="hidden">
+            <div class="success-icon">🎉</div>
+            <h1 class="success-title">Тренировка окончена!</h1>
+            <p class="success-text">Отличная работа, атлет.</p>
+            <div class="xp-reward">+50 XP</div>
+
+            <p style="margin-top: 40px; font-size: 12px; opacity: 0.5;">
+                Нажми кнопку внизу, чтобы сохранить прогресс
+            </p>
+        </div>
+
     </div>
 
     <nav class="bottom-nav" id="nav-bar">

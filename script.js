@@ -115,20 +115,55 @@ function toggleTask(index) {
     updateProgress();
 }
 
+// --- ИЗМЕНЕННАЯ ЛОГИКА ЗАВЕРШЕНИЯ ---
+
+// 1. Функция обновления прогресс-бара
 function updateProgress() {
     const total = workout.length;
     const done = document.querySelectorAll('.checkbox.checked').length;
     progressBar.style.width = `${(done / total) * 100}%`;
+
     if (done === total) {
-        tg.MainButton.text = "✅ ЗАВЕРШИТЬ ДЕНЬ";
+        // Когда все выполнено - показываем кнопку "ЗАВЕРШИТЬ"
+        tg.MainButton.text = "🏁 ЗАВЕРШИТЬ";
         tg.MainButton.color = "#00f2ff";
         tg.MainButton.textColor = "#000000";
         tg.MainButton.show();
+
+        // Переназначаем клик на открытие экрана успеха
+        tg.MainButton.onClick(showSuccessScreen);
     } else {
         tg.MainButton.hide();
     }
 }
 
+// 2. Функция показа экрана успеха (вместо мгновенного закрытия)
+function showSuccessScreen() {
+    // Скрываем вкладки тренировки
+    document.getElementById('tab-workout').classList.remove('active');
+    document.getElementById('nav-bar').classList.add('hidden'); // Прячем меню
+
+    // Показываем экран успеха
+    document.getElementById('success-screen').classList.remove('hidden');
+
+    // Вибрация успеха
+    tg.HapticFeedback.notificationOccurred('success');
+
+    // Меняем кнопку на "СОХРАНИТЬ И ВЫЙТИ"
+    tg.MainButton.text = "💾 СОХРАНИТЬ ПРОГРЕСС";
+    tg.MainButton.offClick(showSuccessScreen); // Удаляем старый обработчик
+    tg.MainButton.onClick(sendDataAndClose);   // Ставим финальный обработчик
+}
+
+// 3. Финальная отправка данных (закрывает приложение)
+function sendDataAndClose() {
+    const data = JSON.stringify({
+        week: currentWeek,
+        day: currentDay,
+        status: "success"
+    });
+    tg.sendData(data); // Вот это действие закрывает WebApp
+}
 function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
     const display = document.getElementById('timerValue');
