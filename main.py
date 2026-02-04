@@ -39,9 +39,10 @@ async def init_db():
 
 
 async def get_top_users():
-    """Получает топ-3 пользователей по XP"""
+    """Получает топ-10 пользователей по XP"""
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT username, xp FROM users ORDER BY xp DESC LIMIT 3") as cursor:
+        # ИЗМЕНЕНИЕ: LIMIT 3 -> LIMIT 10
+        async with db.execute("SELECT username, xp FROM users ORDER BY xp DESC LIMIT 10") as cursor:
             rows = await cursor.fetchall()
             # Превращаем список в строку вида "Name1:100|Name2:50|Name3:10"
             top_list = []
@@ -164,13 +165,13 @@ async def process_data(message: types.Message):
                 bonus_xp = 150
                 msg = f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\nПереход на уровень {new_week}.\nБонус +{bonus_xp} XP\n🔥 Серия: {new_streak} дн."
 
-            # Обновляем данные (включая username, чтобы он был актуальным в топе)
+            # Обновляем данные
             await db.execute(
                 "UPDATE users SET week=?, day=?, xp=xp+?, streak=?, last_active=?, username=? WHERE user_id=?",
                 (new_week, new_day, bonus_xp, new_streak, today_str, clean_username, user_id))
             await db.commit()
 
-            # Получаем свежий ТОП (возможно, мы только что в него попали!)
+            # Получаем свежий ТОП
             top_leaders = await get_top_users()
             safe_leaders = urllib.parse.quote(top_leaders)
 
