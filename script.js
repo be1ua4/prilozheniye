@@ -41,23 +41,21 @@ if (pHeight === 0 || pWeight === 0) {
 } else {
     document.getElementById('main-app').classList.remove('hidden');
 }
-
+// 3. ЗАПОЛНЕНИЕ ДАННЫХ
 // 3. ЗАПОЛНЕНИЕ ДАННЫХ
 document.getElementById('week-num').innerText = currentWeek;
-document.getElementById('day-display').innerText = `ДЕНЬ ${currentDay} / 3`;
+
+// Логика отображения "ДЕНЬ Х" и Бейджа
+const dayDisplay = document.getElementById('day-display');
+dayDisplay.innerHTML = `ДЕНЬ ${currentDay} / 3`;
+
+// ЕСЛИ ЕСТЬ AI WORKOUT - ДОБАВЛЯЕМ БЕЙДЖ
 if (aiWorkout) {
-    document.getElementById('day-display').innerHTML += ` <span style="color:#0f0; font-size:10px; border:1px solid #0f0; padding:1px 4px; border-radius:4px;">AI</span>`;
+    const badge = document.createElement('span');
+    badge.className = 'ai-badge';
+    badge.innerHTML = 'AI 🧠'; // Значок мозга или робота
+    dayDisplay.appendChild(badge);
 }
-
-document.getElementById('streak-display').innerText = currentStreak;
-document.getElementById('profile-name').innerText = userName;
-document.getElementById('display-goal').innerText = pGoal;
-document.getElementById('display-height').innerText = pHeight;
-document.getElementById('display-jump').innerText = pJump.toFixed(2);
-document.getElementById('display-reach').innerText = pReach;
-document.getElementById('display-bg').innerText = pBg;
-document.getElementById('display-xp').innerText = currentXP;
-
 // --- ЗАПОЛНЕНИЕ ТАБЛИЦЫ ЛИДЕРОВ ---
 const leaderContainer = document.getElementById('tab-leaderboard');
 const refreshBtn = document.querySelector('.refresh-btn');

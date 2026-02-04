@@ -1,12 +1,12 @@
 import asyncio
 import json
 import logging
-import aiosqlite
+import aiosqlite  # Используем SQLite
 import urllib.parse
 import base64
 import random
-import re
-from datetime import datetime, timedelta
+import os
+from datetime import datetime
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
@@ -14,12 +14,22 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 # --- НАСТРОЙКИ ---
 TOKEN = "7590291969:AAGbIrhcgWLkcj0k3sRK_XiBsZPpmHrQin4"
 WEBAPP_URL = "https://be1ua4.github.io/prilozheniye/"
-DB_NAME = "spirit.db"
+
+# --- УМНАЯ НАСТРОЙКА БАЗЫ ДАННЫХ ---
+# Если мы на сервере (Railway) и там подключен Volume /app/data
+if os.path.exists("/app/data"):
+    DB_NAME = "/app/data/spirit.db"
+    print("📂 LOG: Работаю с базой на сервере (Volume)")
+else:
+    DB_NAME = "spirit.db"
+    print("💻 LOG: Работаю с локальной базой")
 
 GIGACHAT_KEY = "MDE5YzBhOTQtZDYwMi03ODQzLTk5OTAtYTNmNGQ0MWEzODc1OjAyMjVkZDM5LTEzN2QtNDQzMS04NDE0LWM2MmQyNjA0MzEwNw=="
+ADMIN_IDS = [941369221]  # Замените на свой ID
 
 dp = Dispatcher()
 
+# Проверка GigaChat
 try:
     from gigachat import GigaChat
 
@@ -29,96 +39,64 @@ except ImportError:
     print("⚠️ Библиотека 'gigachat' не найдена.")
 
 
-# --- ГЕНЕРАЦИЯ ТРЕНИРОВКИ (С ПРОГРЕССИЕЙ НАГРУЗКИ) ---
+# --- ГЕНЕРАЦИЯ ТРЕНИРОВКИ (AI) ---
 async def generate_ai_workout(height, weight, bg, goal, week, day):
-    print(f"DEBUG: Генерация. Неделя {week}, День {day}. Цель: {goal}")
+    print(f"DEBUG: Генерация AI. Неделя {week}, День {day}. Цель: {goal}")
 
     if not HAS_GIGACHAT:
-        return json.dumps([{"name": "Выпрыгивания", "sets": 3, "reps": 20}])
+        return json.dumps([{"name": "Выпрыгивания", "sets": 3, "reps": 15}])
 
     try:
         chat = GigaChat(credentials=GIGACHAT_KEY, verify_ssl_certs=False)
 
-        # 1. БАЗОВЫЙ ОБЪЕМ (ОТ УРОВНЯ)
-        base_reps = 100
-        progression_rate = 15  # +15 повторений каждую неделю
-
+        # 1. ПРОГРЕССИЯ
+        base_reps = 80
+        progression_rate = 20
         if bg == "Intermediate":
-            base_reps = 250
-            progression_rate = 25
+            base_reps, progression_rate = 200, 30
         elif bg == "Advanced":
-            base_reps = 500
-            progression_rate = 40
+            base_reps, progression_rate = 400, 50
 
-        # 2. МАТЕМАТИКА ПРОГРЕССИИ (Progressive Overload)
-        # Чем дальше неделя, тем больше повторений требует бот
         target_volume = base_reps + ((week - 1) * progression_rate)
 
-        overload_instruction = ""
-        if week > 4:
-            overload_instruction = "Увеличивай сложность упражнений (например, больше плиометрики)."
-        if week > 8:
-            overload_instruction = "МАКСИМАЛЬНАЯ ИНТЕНСИВНОСТЬ. Добавляй супер-сеты или увеличивай подходы."
-
-        # 3. ФОКУС ДНЯ (МИКРОЦИКЛ)
+        # 2. ФОКУС ДНЯ
         day_focus = ""
-        day_cycle = day % 3
-        if day_cycle == 1:
-            day_focus = "ФОКУС: Взрывная сила (Плиометрика). Тумба, глубинные прыжки."
-        elif day_cycle == 2:
-            day_focus = "ФОКУС: Сила ног. Приседы, выпады, статика."
+        cycle = day % 3
+        if cycle == 1:
+            day_focus = "ФОКУС: Взрывная сила (Плиометрика). Прыжки в высоту."
+        elif cycle == 2:
+            day_focus = "ФОКУС: Сила ног (Strength). Приседания, выпады."
         else:
-            day_focus = "ФОКУС: Скорость и эластичность. Пого, бёрнауты, частота."
-
-        # 4. СПЕЦИФИКА ЦЕЛИ
-        goal_prompt = f"Глобальная цель: {goal}."
-        if goal == "Vertical Jump":
-            goal_prompt += " Акцент на высоту вылета."
+            day_focus = "ФОКУС: Скорость (Speed). Пого, частота."
 
         full_list = "['Выпрыгивания', 'Зашагивания', 'Прыжки на икрах', 'Бёрнауты', 'Прыжки из приседа', 'Запрыгивания на тумбу', 'Глубинные прыжки', 'Пого прыжки', 'Прыжок в длину', 'Болгарские выпады', 'Прыжки в выпаде', 'Пистолетик', 'Спринты', 'Становая тяга', 'Ягодичный мост', 'Махи гирей', 'Выпрыгивание с колен']"
 
         prompt = (
-            f"Роль: Тренер по прыжкам. Атлет: {height}см, {weight}кг, Опыт: {bg}.\n"
-            f"ЭТАП: Неделя {week} (Прогрессия нагрузки).\n"
-            f"ТРЕБУЕМЫЙ ОБЪЕМ: минимум {target_volume} повторений за тренировку (сумма по всем упражнениям).\n"
-            f"{overload_instruction}\n"
-            f"{goal_prompt}\n"
-            f"{day_focus}\n\n"
-            f"Задача: Составь план на 1 тренировку (3-6 упражнений) из списка: {full_list}.\n"
-            f"Подбирай подходы/повторения так, чтобы в сумме вышло {target_volume}+.\n"
-            f"Ответь СТРОГО JSON массивом: [{{\"name\": \"...\", \"sets\": N, \"reps\": N}}]"
+            f"Роль: Тренер. Атлет: {height}см, {weight}кг, Опыт: {bg}.\n"
+            f"ЭТАП: Неделя {week}, День {day}. Цель: {goal}.\n"
+            f"ОБЪЕМ: ~{target_volume} повторений всего.\n"
+            f"{day_focus}\n"
+            f"Составь план (4-6 упр) ТОЛЬКО из списка: {full_list}.\n"
+            f"Ответь JSON массивом: [{{'name': 'Имя', 'sets': N, 'reps': N}}]"
         )
 
         response = chat.chat(prompt)
         content = response.choices[0].message.content
 
-        # Чистка JSON
-        start = content.find('[')
-        end = content.rfind(']') + 1
-
+        start, end = content.find('['), content.rfind(']') + 1
         if start != -1 and end != -1:
-            json_str = content[start:end]
-            try:
-                data = json.loads(json_str)
-            except json.JSONDecodeError:
-                fixed_str = json_str.replace("'", '"')
-                try:
-                    data = json.loads(fixed_str)
-                except:
-                    raise ValueError("Bad JSON")
-            return json.dumps(data, ensure_ascii=False)
+            clean_json = content[start:end].replace("'", '"')
+            return json.dumps(json.loads(clean_json), ensure_ascii=False)
         else:
-            raise ValueError("No JSON found")
+            raise ValueError("No JSON")
 
     except Exception as e:
         print(f"AI Error: {e}")
-        # Fallback с учетом прогрессии
-        base = 20 + (week * 2)
         return json.dumps(
-            [{"name": "Выпрыгивания", "sets": 4, "reps": base}, {"name": "Бёрнауты", "sets": 2, "reps": base * 2}])
+            [{"name": "Выпрыгивания", "sets": 3, "reps": 20}, {"name": "Бёрнауты", "sets": 1, "reps": 50}])
 
 
-# --- БАЗА ДАННЫХ ---
+# --- БАЗА ДАННЫХ (SQLITE) ---
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute('''
@@ -142,217 +120,168 @@ async def init_db():
             )
         ''')
         await db.commit()
+        print(f"✅ База данных подключена: {DB_NAME}")
 
 
-async def get_top_users():
+# --- СОЗДАНИЕ ССЫЛКИ ---
+async def create_app_link(user_id, force_new=False):
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT username, xp FROM users ORDER BY xp DESC LIMIT 10") as cursor:
-            rows = await cursor.fetchall()
-            top_list = []
-            for row in rows:
-                name = row[0] if row[0] else "Атлет"
-                xp = row[1]
-                top_list.append(f"{name}:{xp}")
-            return "|".join(top_list)
+        async with db.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)) as cursor:
+            row = await cursor.fetchone()
 
-
-# --- УМНАЯ ГЕНЕРАЦИЯ ССЫЛКИ ---
-async def create_app_link(user_id, db, force_new=False):
-    async with db.execute(
-            "SELECT week, day, xp, height, weight, jump, reach, sport_bg, goal, streak, username, last_gain, current_plan, plan_date FROM users WHERE user_id = ?",
-            (user_id,)) as cursor:
-        row = await cursor.fetchone()
         if not row: return None
-        week, day, xp, height, weight, jump, reach, sport_bg, goal, streak, username, last_gain, current_plan, plan_date = row
 
-    today_str = datetime.now().strftime("%Y-%m-%d")
+        # Распаковка кортежа SQLite (по индексам)
+        # 0:id, 1:name, 2:week, 3:day, 4:xp, 5:h, 6:w, 7:jump, 8:reach, 9:bg, 10:goal, 11:streak, 12:last, 13:gain, 14:plan, 15:date
+        week, day = row[2], row[3]
+        current_plan, plan_date = row[14], row[15]
+        today_str = datetime.now().strftime("%Y-%m-%d")
 
-    # Логика кэша
-    if current_plan and plan_date == today_str and not force_new:
-        print("LOG: Использую сохраненный план из БД")
-        ai_plan_json = current_plan
-    else:
-        print(f"LOG: Генерирую новый план (Неделя {week})")
-        h_val = height if height > 0 else 180
-        w_val = weight if weight > 0 else 75
+        # Логика генерации (если плана нет или новый день)
+        if (not current_plan) or (plan_date != today_str) or force_new:
+            print(f"LOG: Генерирую план для {user_id}")
+            h = row[5] if row[5] > 0 else 180
+            w = row[6] if row[6] > 0 else 75
 
-        # Передаем week и day для расчета нагрузки
-        ai_plan_json = await generate_ai_workout(h_val, w_val, sport_bg, goal, week, day)
+            ai_plan_json = await generate_ai_workout(h, w, row[9], row[10], week, day)
 
-        await db.execute("UPDATE users SET current_plan=?, plan_date=? WHERE user_id=?",
-                         (ai_plan_json, today_str, user_id))
-        await db.commit()
+            await db.execute("UPDATE users SET current_plan=?, plan_date=? WHERE user_id=?",
+                             (ai_plan_json, today_str, user_id))
+            await db.commit()
+        else:
+            print("LOG: План из кэша")
+            ai_plan_json = current_plan
 
-    safe_plan = base64.b64encode(ai_plan_json.encode('utf-8')).decode('utf-8')
-    safe_name = urllib.parse.quote(username or "Атлет")
-    safe_goal = urllib.parse.quote(goal)
-    safe_bg = urllib.parse.quote(sport_bg)
-    top_leaders = await get_top_users()
-    safe_leaders = urllib.parse.quote(top_leaders)
+        safe_plan = base64.b64encode(ai_plan_json.encode('utf-8')).decode('utf-8')
 
-    return f"{WEBAPP_URL}?week={week}&day={day}&xp={xp}&name={safe_name}&h={height}&w={weight}&j={jump}&r={reach}&bg={safe_bg}&goal={safe_goal}&streak={streak}&top={safe_leaders}&plan={safe_plan}&gain={last_gain}"
+        params = {
+            'week': week, 'day': day, 'xp': row[4],
+            'name': row[1] or "Атлет",
+            'h': row[5], 'w': row[6], 'j': row[7], 'r': row[8],
+            'bg': row[9], 'goal': row[10], 'streak': row[11],
+            'gain': row[13], 'plan': safe_plan
+        }
+        return f"{WEBAPP_URL}?{urllib.parse.urlencode(params)}"
 
 
+# --- ХЕНДЛЕРЫ ---
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     user_id = message.from_user.id
-    raw_username = message.from_user.username or message.from_user.first_name or "Атлет"
-    clean_username = raw_username.replace(":", "").replace("|", "")
+    username = message.from_user.username or "Атлет"
 
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)", (user_id, clean_username))
-        await db.execute("UPDATE users SET username=? WHERE user_id=?", (clean_username, user_id))
+        await db.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)", (user_id, username))
+        await db.execute("UPDATE users SET username=? WHERE user_id=?", (username, user_id))
         await db.commit()
 
-        async with db.execute("SELECT streak FROM users WHERE user_id = ?", (user_id,)) as cursor:
-            row = await cursor.fetchone()
-            streak = row[0] if row else 0
+        async with db.execute("SELECT streak FROM users WHERE user_id=?", (user_id,)) as c:
+            res = await c.fetchone()
+            streak = res[0] if res else 0
 
-        app_link = await create_app_link(user_id, db)
+    link = await create_app_link(user_id)
+    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Открыть Spirit App", web_app=WebAppInfo(url=link))]],
+                             resize_keyboard=True)
+    await message.answer(f"🌪 **Spirit of Power**\nАтлет: {username}\nСерия: {streak} 🔥\nТренер: AI 🧠", reply_markup=kb,
+                         parse_mode="Markdown")
 
-    kb = ReplyKeyboardMarkup(keyboard=[
-        [KeyboardButton(text="🔥 Открыть Spirit App", web_app=WebAppInfo(url=app_link))]
-    ], resize_keyboard=True)
 
-    await message.answer(
-        f"🌪 **Spirit of Power**\n"
-        f"Атлет: {clean_username}\n"
-        f"Серия: {streak} 🔥\n"
-        f"Тренер: GigaChat 🧠\n"
-        "Заходи в приложение 👇",
-        reply_markup=kb,
-        parse_mode="Markdown"
-    )
+@dp.message(Command("users"))
+async def cmd_users(message: types.Message):
+    if message.from_user.id not in ADMIN_IDS: return
+
+    async with aiosqlite.connect(DB_NAME) as db:
+        async with db.execute("SELECT COUNT(*) FROM users") as c:
+            count = (await c.fetchone())[0]
+        async with db.execute("SELECT username, xp, goal FROM users ORDER BY xp DESC LIMIT 10") as c:
+            rows = await c.fetchall()
+
+    text = f"👥 **Всего:** {count}\n\n🏆 **Топ-10:**\n"
+    for r in rows: text += f"👤 {r[0]} | {r[1]} XP | {r[2]}\n"
+    await message.answer(text)
 
 
 @dp.message(F.content_type == types.ContentType.WEB_APP_DATA)
 async def process_data(message: types.Message):
     data = json.loads(message.web_app_data.data)
     user_id = message.from_user.id
-    raw_username = message.from_user.username or message.from_user.first_name or "Атлет"
-    clean_username = raw_username.replace(":", "").replace("|", "")
 
     async with aiosqlite.connect(DB_NAME) as db:
-        await db.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)", (user_id, clean_username))
+        await db.execute("INSERT OR IGNORE INTO users (user_id, username) VALUES (?, ?)", (user_id, "User"))
+        await db.commit()
 
         if data.get("action") == "refresh":
-            await db.execute("UPDATE users SET username=? WHERE user_id=?", (clean_username, user_id))
-            await db.commit()
-            new_link = await create_app_link(user_id, db, force_new=False)
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]],
-                resize_keyboard=True)
-            await message.answer("🔄 Данные обновлены!", reply_markup=kb)
+            pass  # Просто обновим ссылку ниже
 
         elif data.get("action") == "generate_ai":
-            new_link = await create_app_link(user_id, db, force_new=True)
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]],
-                resize_keyboard=True)
-            await message.answer("🤖 Тренировка пересчитана! Нагрузка адаптирована под твой прогресс.", reply_markup=kb)
+            # Принудительно генерируем новый план
+            link = await create_app_link(user_id, force_new=True)
+            kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
+                                     resize_keyboard=True)
+            await message.answer("🧠 План перестроен!", reply_markup=kb)
+            return
 
         elif data.get("action") == "save_profile":
-            await db.execute(
-                "UPDATE users SET height=?, weight=?, jump=?, reach=?, sport_bg=?, goal=?, username=? WHERE user_id=?",
-                (data['h'], data['w'], data['j'], data['r'], data['bg'], data['goal'], clean_username, user_id))
+            await db.execute("UPDATE users SET height=?, weight=?, jump=?, reach=?, sport_bg=?, goal=? WHERE user_id=?",
+                             (int(data['h']), int(data['w']), float(data['j']), int(data['r']), data['bg'],
+                              data['goal'], user_id))
             await db.commit()
-            new_link = await create_app_link(user_id, db, force_new=True)
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]],
-                resize_keyboard=True)
-            await message.answer(f"✅ Профиль сохранен!\nПлан адаптирован под цель: {data['goal']} 🎯", reply_markup=kb)
+
+            link = await create_app_link(user_id, force_new=True)
+            kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
+                                     resize_keyboard=True)
+            await message.answer("✅ Профиль сохранен!", reply_markup=kb)
+            return
 
         elif data.get("status") == "success":
             async with db.execute(
-                    "SELECT week, day, xp, streak, last_active, sport_bg, jump FROM users WHERE user_id = ?",
-                    (user_id,)) as cursor:
-                week, day, xp, streak, last_active, sport_bg, current_jump = await cursor.fetchone()
+                    "SELECT week, day, xp, streak, last_active, sport_bg, jump FROM users WHERE user_id=?",
+                    (user_id,)) as c:
+                row = await c.fetchone()
 
-            min_gain, max_gain = (0.01, 0.15) if sport_bg == "Advanced" else (0.05, 0.30)
-            jump_increase = round(random.uniform(min_gain, max_gain), 2)
-            new_jump = round(current_jump + jump_increase, 2)
+            # Расчет
+            week, day, xp, streak, last_active_str, bg, jump = row
+            min_g, max_g = (0.01, 0.15) if bg == "Advanced" else (0.05, 0.35)
+            gain = round(random.uniform(min_g, max_g), 2)
+            new_jump = round(jump + gain, 2)
 
-            today_str = datetime.now().strftime("%Y-%m-%d")
-            new_streak = streak
-            if last_active:
-                delta = (datetime.now() - datetime.strptime(last_active, "%Y-%m-%d")).days
-                new_streak = new_streak + 1 if delta == 1 else (1 if delta > 1 else new_streak)
-            else:
-                new_streak = 1
+            today = datetime.now().date()
+            last = datetime.strptime(last_active_str, "%Y-%m-%d").date() if last_active_str else None
 
-            new_day = day + 1
-            new_week = week
-            bonus_xp = 50
-            msg = f"✅ Тренировка завершена! +{bonus_xp} XP\n📈 **Прыжок: +{jump_increase} см**\n🔥 Серия: {new_streak} дн."
+            new_streak = streak + 1 if last and (today - last).days == 1 else (
+                1 if not last or (today - last).days > 1 else streak)
+
+            new_day, new_week = day + 1, week
+            msg = f"✅ Тренировка завершена!\n📈 +{gain} см\n🔥 Серия: {new_streak}"
 
             if new_day > 3:
-                new_day = 1
-                new_week += 1
-                bonus_xp = 150
-                msg = f"🏆 **НЕДЕЛЯ {week} ЗАКРЫТА!**\n📈 **Прыжок: +{jump_increase} см**\nБонус +{bonus_xp} XP\n🔥 Серия: {new_streak} дн."
+                new_day, new_week = 1, week + 1
+                msg = f"🏆 НЕДЕЛЯ {week} ЗАКРЫТА!\n📈 +{gain} см"
 
+            # СБРОС ПЛАНА (current_plan='')
             await db.execute(
-                "UPDATE users SET week=?, day=?, xp=xp+?, streak=?, last_active=?, username=?, jump=?, last_gain=?, current_plan='' WHERE user_id=?",
-                (new_week, new_day, bonus_xp, new_streak, today_str, clean_username, new_jump, jump_increase, user_id))
+                "UPDATE users SET week=?, day=?, xp=xp+50, streak=?, last_active=?, jump=?, last_gain=?, current_plan='' WHERE user_id=?",
+                (new_week, new_day, new_streak, str(today), new_jump, gain, user_id))
             await db.commit()
 
-            new_link = await create_app_link(user_id, db)
-            kb = ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="🔥 Следующая тренировка", web_app=WebAppInfo(url=new_link))]],
-                resize_keyboard=True)
-            await message.answer(msg, reply_markup=kb, parse_mode="Markdown")
+            link = await create_app_link(user_id)
+            kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Следующая", web_app=WebAppInfo(url=link))]],
+                                     resize_keyboard=True)
+            await message.answer(msg, reply_markup=kb)
+            return
 
+    # Дефолтный ответ для refresh
+    link = await create_app_link(user_id)
+    kb = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=link))]],
+                             resize_keyboard=True)
+    await message.answer("Данные обновлены", reply_markup=kb)
 
-# --- ВАШ ID (чтобы команду могли вызывать только вы) ---
-# Узнать свой ID можно в боте @userinfobot
-ADMIN_IDS = [941369221]  # <-- ЗАМЕНИТЕ НА СВОЙ ID (числом, без кавычек)
-
-
-@dp.message(Command("users"))
-async def cmd_users(message: types.Message):
-    # Проверка на админа
-    if message.from_user.id not in ADMIN_IDS:
-        return  # Если пишет не админ - игнорируем
-
-    async with aiosqlite.connect(DB_NAME) as db:
-        # 1. Считаем всего людей
-        async with db.execute("SELECT COUNT(*) FROM users") as cursor:
-            total_users = (await cursor.fetchone())[0]
-
-        # 2. Берем последних 10 пользователей
-        async with db.execute("""
-            SELECT username, height, weight, goal, xp, streak 
-            FROM users 
-            ORDER BY user_id DESC 
-            LIMIT 10
-        """) as cursor:
-            rows = await cursor.fetchall()
-
-    # Формируем красивый отчет
-    text = f"📊 **Статистика Spirit App**\n\n"
-    text += f"👥 Всего атлетов: **{total_users}**\n"
-    text += f"➖➖➖➖➖➖➖➖\n"
-    text += f"🆕 **Последние 10:**\n\n"
-
-    for row in rows:
-        username = row[0] if row[0] else "Без ника"
-        h, w = row[1], row[2]
-        goal = row[3]
-        xp = row[4]
-        streak = row[5]
-
-        text += f"👤 **{username}**\n"
-        text += f"   📏 {h}см / ⚖️ {w}кг\n"
-        text += f"   🎯 {goal}\n"
-        text += f"   ⚡️ {xp} XP | 🔥 {streak} дн.\n\n"
-
-    await message.answer(text, parse_mode="Markdown")
 
 async def main():
     await init_db()
     bot = Bot(token=TOKEN)
     logging.basicConfig(level=logging.INFO)
-    print("Бот запущен...")
+    print("Бот запущен на SQLite...")
     await dp.start_polling(bot)
 
 

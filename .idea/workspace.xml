@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5972d855-6adf-4f16-bfd2-d54b1e1a4d1b" name="Changes" comment="/=-098765430+2,11 Ъ,8неквуыфя">
+    <list default="true" id="5972d855-6adf-4f16-bfd2-d54b1e1a4d1b" name="Changes" comment="член">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spirit.db" beforeDir="false" afterPath="$PROJECT_DIR$/spirit.db" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -441,12 +442,21 @@
       <option name="project" value="LOCAL" />
       <updated>1770223168127</updated>
     </task>
-    <option name="localTasksCounter" value="43" />
+    <task id="LOCAL-00043" summary="член">
+      <option name="closed" value="true" />
+      <created>1770233502942</created>
+      <option name="number" value="00043" />
+      <option name="presentableId" value="LOCAL-00043" />
+      <option name="project" value="LOCAL" />
+      <updated>1770233502942</updated>
+    </task>
+    <option name="localTasksCounter" value="44" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="1" />
     <MESSAGE value="/=-098765430+2,11 Ъ,8неквуыфя" />
-    <option name="LAST_COMMIT_MESSAGE" value="/=-098765430+2,11 Ъ,8неквуыфя" />
+    <MESSAGE value="член" />
+    <option name="LAST_COMMIT_MESSAGE" value="член" />
   </component>
 </project>

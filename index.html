@@ -223,6 +223,27 @@
             animation: glow 2s infinite alternate;
             margin-bottom: 10px;
         }
+        /* --- AI BADGE STYLE --- */
+        .ai-badge {
+            background: linear-gradient(135deg, #00f2ff, #b000ff);
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.4);
+            animation: pulseBadge 2s infinite;
+            vertical-align: middle;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        @keyframes pulseBadge {
+            0% { box-shadow: 0 0 10px rgba(0, 242, 255, 0.4); }
+            50% { box-shadow: 0 0 20px rgba(176, 0, 255, 0.6); }
+            100% { box-shadow: 0 0 10px rgba(0, 242, 255, 0.4); }
+        }
 
         /* НОВЫЙ СТИЛЬ ДЛЯ ПРИБАВКИ К ПРЫЖКУ */
         .jump-reward {
