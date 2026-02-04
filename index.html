@@ -28,7 +28,7 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- ЭКРАН ЗНАКОМСТВА (ONBOARDING) --- */
+        /* --- ЭКРАН ЗНАКОМСТВА --- */
         #onboarding-screen {
             display: flex; flex-direction: column; justify-content: center; height: 90vh;
         }
@@ -45,7 +45,7 @@
             font-weight: bold; font-size: 16px; border: none; margin-top: 20px; cursor: pointer;
         }
 
-        /* --- ПРОФИЛЬ (СТАТИСТИКА) --- */
+        /* --- ПРОФИЛЬ --- */
         .profile-header { text-align: center; margin-bottom: 30px; }
         .avatar-big { font-size: 80px; margin-bottom: 10px; display: block; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
@@ -54,7 +54,7 @@
         .stat-lbl { font-size: 12px; color: var(--text-sec); }
         .goal-card { background: linear-gradient(45deg, rgba(0,242,255,0.1), transparent); border: 1px solid var(--primary); padding: 20px; border-radius: 16px; text-align: center; margin-bottom: 20px; }
 
-        /* --- ОСТАЛЬНОЕ (КАРТОЧКИ, МЕНЮ) --- */
+        /* --- КАРТОЧКИ --- */
         .card { background: var(--card-bg); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
         .card-left { display: flex; align-items: center; gap: 15px; }
         .icon-box { font-size: 24px; width: 40px; height: 40px; background: rgba(0,0,0,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
@@ -65,15 +65,38 @@
         .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
         .progress-bar { height: 100%; width: 0%; background: var(--primary); transition: width 0.4s ease; }
 
+        /* --- МЕНЮ --- */
         .bottom-nav { position: fixed; bottom: 20px; left: 20px; right: 20px; height: 60px; background: rgba(30, 30, 30, 0.9); backdrop-filter: blur(12px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-around; align-items: center; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sec); font-size: 10px; }
         .nav-item.active { color: var(--primary); transform: translateY(-2px); }
         .nav-icon { font-size: 20px; margin-bottom: 4px; }
 
+        /* --- ТАЙМЕР И МОДАЛКИ --- */
         .timer-modal { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1c1c1e; border-radius: 20px 20px 0 0; padding: 20px; box-sizing: border-box; transition: bottom 0.3s; text-align: center; border-top: 1px solid var(--primary); z-index: 2000; }
         .timer-modal.active { bottom: 0; }
 
-        /* ИСПРАВЛЕНИЕ 1: ДОБАВЛЕНА СКОБКА } */
+        /* ВОТ ОНА, ПОТЕРЯННАЯ КНОПКА! */
+        .btn-skip {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 12px 30px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-top: 15px;
+            backdrop-filter: blur(5px);
+            transition: all 0.2s ease;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .btn-skip:active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+
+        /* --- ЭКРАН УСПЕХА --- */
         #success-screen {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             height: 80vh; text-align: center;
@@ -95,38 +118,19 @@
 
     <div id="onboarding-screen" class="hidden">
         <h1 style="text-align: center; margin-bottom: 30px;">Карточка Атлета 🪪</h1>
-
-        <div class="input-group">
-            <label>Твоя цель</label>
-            <input type="text" id="in-goal" class="input-field" placeholder="Например: Данк двумя руками">
-        </div>
-
+        <div class="input-group"><label>Твоя цель</label><input type="text" id="in-goal" class="input-field" placeholder="Например: Данк двумя руками"></div>
         <div class="stats-grid">
-            <div class="input-group">
-                <label>Рост (см)</label>
-                <input type="number" id="in-height" class="input-field" placeholder="180">
-            </div>
-            <div class="input-group">
-                <label>Вес (кг)</label>
-                <input type="number" id="in-weight" class="input-field" placeholder="75">
-            </div>
+            <div class="input-group"><label>Рост (см)</label><input type="number" id="in-height" class="input-field" placeholder="180"></div>
+            <div class="input-group"><label>Вес (кг)</label><input type="number" id="in-weight" class="input-field" placeholder="75"></div>
         </div>
-
-        <div class="input-group">
-            <label>Текущий прыжок (см)</label>
-            <input type="number" id="in-jump" class="input-field" placeholder="50">
-        </div>
-
+        <div class="input-group"><label>Текущий прыжок (см)</label><input type="number" id="in-jump" class="input-field" placeholder="50"></div>
         <button class="save-btn" onclick="saveProfile()">СОХРАНИТЬ ПРОФИЛЬ</button>
     </div>
 
     <div id="main-app">
         <div id="tab-workout" class="tab-content active">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div>
-                    <span id="day-display" style="color:var(--primary); font-size: 14px;">ДЕНЬ 1</span>
-                    <h1 style="margin:0;">Неделя <span id="week-num">1</span></h1>
-                </div>
+                <div><span id="day-display" style="color:var(--primary); font-size: 14px;">ДЕНЬ 1</span><h1 style="margin:0;">Неделя <span id="week-num">1</span></h1></div>
                 <div style="font-size: 28px;">🔥</div>
             </div>
             <div class="progress-container"><div class="progress-bar" id="progress"></div></div>
@@ -135,7 +139,6 @@
 
         <div id="tab-leaderboard" class="tab-content">
             <h2 style="text-align: center;">Топ Атлетов</h2>
-            <p style="text-align: center; opacity: 0.5;">Рейтинг по XP</p>
             <div class="card"><div class="card-left"><b>#1</b> Beast_Mode</div><div>5200 XP</div></div>
             <div class="card"><div class="card-left"><b>#2</b> Air_Jordan</div><div>4800 XP</div></div>
             <div class="card" style="border-color: var(--primary);"><div class="card-left"><b>Вы</b> <span id="leader-name"></span></div><div id="leader-xp"></div></div>
@@ -143,37 +146,16 @@
 
         <div id="tab-profile" class="tab-content">
             <div class="profile-header">
-                <span class="avatar-big">🥋</span>
-                <h2 id="profile-name">Атлет</h2>
-                <div class="goal-card">
-                    <div style="font-size: 12px; text-transform: uppercase; color: var(--text-sec); margin-bottom: 5px;">Текущая цель</div>
-                    <div id="display-goal" style="font-size: 18px; font-weight: bold;">Стать выше</div>
-                </div>
+                <span class="avatar-big">🥋</span><h2 id="profile-name">Атлет</h2>
+                <div class="goal-card"><div style="font-size: 12px; text-transform: uppercase; color: var(--text-sec); margin-bottom: 5px;">Текущая цель</div><div id="display-goal" style="font-size: 18px; font-weight: bold;">Стать выше</div></div>
             </div>
-
             <div class="stats-grid">
-                <div class="stat-card">
-                    <span class="stat-val" id="display-height">0</span>
-                    <span class="stat-lbl">Рост (см)</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-val" id="display-weight">0</span>
-                    <span class="stat-lbl">Вес (кг)</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-val" id="display-jump">0</span>
-                    <span class="stat-lbl">Прыжок (см)</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-val" id="display-total-workouts">0</span>
-                    <span class="stat-lbl">Тренировок</span>
-                </div>
+                <div class="stat-card"><span class="stat-val" id="display-height">0</span><span class="stat-lbl">Рост</span></div>
+                <div class="stat-card"><span class="stat-val" id="display-weight">0</span><span class="stat-lbl">Вес</span></div>
+                <div class="stat-card"><span class="stat-val" id="display-jump">0</span><span class="stat-lbl">Прыжок</span></div>
+                <div class="stat-card"><span class="stat-val" id="display-total-workouts">0</span><span class="stat-lbl">Тренировок</span></div>
             </div>
-
-            <div class="stat-card" style="text-align: left; display: flex; justify-content: space-between;">
-                <span>⚡ Всего XP</span>
-                <span id="display-xp" style="color:white; font-weight: bold;">0</span>
-            </div>
+            <div class="stat-card" style="text-align: left; display: flex; justify-content: space-between;"><span>⚡ Всего XP</span><span id="display-xp" style="color:white; font-weight: bold;">0</span></div>
         </div>
 
         <div id="success-screen" class="hidden">
@@ -181,24 +163,14 @@
             <h1 class="success-title">Тренировка окончена!</h1>
             <p class="success-text">Отличная работа, атлет.</p>
             <div class="xp-reward">+50 XP</div>
-
-            <p style="margin-top: 40px; font-size: 12px; opacity: 0.5;">
-                Нажми кнопку внизу, чтобы сохранить прогресс
-            </p>
+            <p style="margin-top: 40px; font-size: 12px; opacity: 0.5;">Нажми кнопку внизу, чтобы сохранить прогресс</p>
         </div>
-
     </div>
 
     <nav class="bottom-nav" id="nav-bar">
-        <div class="nav-item active" onclick="switchTab('tab-workout', this)">
-            <div class="nav-icon">💪</div><div>Work</div>
-        </div>
-        <div class="nav-item" onclick="switchTab('tab-leaderboard', this)">
-            <div class="nav-icon">🏆</div><div>Top</div>
-        </div>
-        <div class="nav-item" onclick="switchTab('tab-profile', this)">
-            <div class="nav-icon">👤</div><div>Me</div>
-        </div>
+        <div class="nav-item active" onclick="switchTab('tab-workout', this)"><div class="nav-icon">💪</div><div>Work</div></div>
+        <div class="nav-item" onclick="switchTab('tab-leaderboard', this)"><div class="nav-icon">🏆</div><div>Top</div></div>
+        <div class="nav-item" onclick="switchTab('tab-profile', this)"><div class="nav-icon">👤</div><div>Me</div></div>
     </nav>
 
     <div class="timer-modal" id="timerModal">
