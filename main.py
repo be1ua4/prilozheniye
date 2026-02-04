@@ -12,7 +12,7 @@ from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 # --- НАСТРОЙКИ ---
-TOKEN = "7590291969:AAGbIrhcgWLkcj0k3sRK_XiBsZPpmHrQin4"
+TOKEN = "8205165241:AAFXJw02QBG7m1232iold9TTcn9y9x14Aoc"
 WEBAPP_URL = "https://be1ua4.github.io/prilozheniye/"
 
 # --- УМНАЯ НАСТРОЙКА БАЗЫ ДАННЫХ (SQLite) ---
