@@ -30,8 +30,6 @@ except ImportError:
     print("⚠️ Библиотека 'gigachat' не найдена. Установите её: pip install gigachat")
 
 
-# --- ГЕНЕРАЦИЯ ТРЕНИРОВКИ (GigaChat) ---
-# --- ГЕНЕРАЦИЯ ТРЕНИРОВКИ (GigaChat - UPDATED DB) ---
 # --- ГЕНЕРАЦИЯ ТРЕНИРОВКИ (GigaChat - MILLER & TEMPOZ UPDATE) ---
 async def generate_ai_workout(height, weight, bg, goal):
     print(f"DEBUG: Генерация плана. Цель: {goal}, Уровень: {bg}")
@@ -219,6 +217,15 @@ async def process_data(message: types.Message):
                 keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]],
                 resize_keyboard=True)
             await message.answer("🔄 Данные обновлены!", reply_markup=kb)
+
+        # НОВАЯ ЛОГИКА: ОБРАБОТКА ИИ ПОДБОРА
+        elif data.get("action") == "generate_ai":
+            # Принудительная генерация нового плана (force_new=True)
+            new_link = await create_app_link(user_id, force_new=True)
+            kb = ReplyKeyboardMarkup(
+                keyboard=[[KeyboardButton(text="🔥 Тренироваться", web_app=WebAppInfo(url=new_link))]],
+                resize_keyboard=True)
+            await message.answer("🤖 Нейросеть составила новую программу под твои параметры!", reply_markup=kb)
 
         elif data.get("action") == "save_profile":
             await db.execute(

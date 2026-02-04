@@ -67,6 +67,19 @@
         }
         .save-btn:active { transform: scale(0.95); opacity: 0.9; }
 
+        /* --- КНОПКА ИИ ПОДБОРА --- */
+        .ai-gen-btn {
+            background: linear-gradient(135deg, #b000ff, #00f2ff);
+            color: #fff; width: 100%; padding: 12px; border-radius: 12px;
+            font-weight: 700; font-size: 14px; border: none; margin-bottom: 20px; cursor: pointer;
+            transition: transform 0.2s var(--ease-ios);
+            text-transform: uppercase; letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(176, 0, 255, 0.3);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .ai-gen-btn:active { transform: scale(0.96); opacity: 0.9; }
+
+
         /* --- ПРОФИЛЬ --- */
         .profile-header { text-align: center; margin-bottom: 30px; }
         .avatar-big { font-size: 80px; margin-bottom: 10px; display: block; animation: float 6s ease-in-out infinite; }
@@ -312,6 +325,9 @@
                 </div>
             </div>
             <div class="progress-container"><div class="progress-bar" id="progress"></div></div>
+
+            <button class="ai-gen-btn" onclick="generateAIWorkout()">✨ ИИ Подбор тренировки</button>
+
             <div id="exercise-list"></div>
         </div>
 

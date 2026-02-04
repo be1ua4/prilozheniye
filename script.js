@@ -140,7 +140,7 @@ document.getElementById('rim-bar').style.height = `${barHeight}%`;
 window.refreshData = function() {
     tg.showPopup({
         title: 'Обновление данных',
-        message: 'Приложение перезагрузится для получения свежего рейтинга. Продолжить?',
+        message: 'Приложение перезагрузится для получения свежего рейтинга и программы. Продолжить?',
         buttons: [
             {id: 'ok', type: 'default', text: 'Да, обновить'},
             {id: 'cancel', type: 'cancel', text: 'Отмена'}
@@ -149,6 +149,24 @@ window.refreshData = function() {
         if (buttonId === 'ok') {
             tg.HapticFeedback.impactOccurred('medium');
             const data = JSON.stringify({ action: "refresh" });
+            tg.sendData(data);
+        }
+    });
+}
+
+// --- НОВАЯ ФУНКЦИЯ: ГЕНЕРАЦИЯ ИИ ТРЕНИРОВКИ ---
+window.generateAIWorkout = function() {
+    tg.showPopup({
+        title: 'AI Тренер 🤖',
+        message: 'Нейросеть составит новую уникальную программу на сегодня. Текущая тренировка будет заменена. Продолжить?',
+        buttons: [
+            {id: 'yes', type: 'default', text: 'Да, подобрать'},
+            {id: 'no', type: 'cancel', text: 'Отмена'}
+        ]
+    }, function(btn) {
+        if (btn === 'yes') {
+            tg.HapticFeedback.impactOccurred('heavy');
+            const data = JSON.stringify({ action: "generate_ai" });
             tg.sendData(data);
         }
     });
