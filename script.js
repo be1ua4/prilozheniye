@@ -183,27 +183,168 @@ function playSound(id) {
 }
 
 // 6. РЕНДЕР ТРЕНИРОВКИ
+// 6. РЕНДЕР ТРЕНИРОВКИ (DUOLINGO STYLE)
 const workout = aiWorkout || programs[currentWeek] || [];
 const list = document.getElementById('exercise-list');
 const progressBar = document.getElementById('progress');
-list.innerHTML = "";
+
+// Очищаем и добавляем контейнер тропы
+list.innerHTML = `<div class="duo-container" id="path-container"></div>`;
+const pathContainer = document.getElementById('path-container');
+
 workout.forEach((ex, index) => {
-    const dbData = exercisesDB[ex.name] || { desc: "Упражнение от тренера", icon: "🤖", gif: "" };
-    const div = document.createElement('div');
-    div.className = 'card';
-    div.onclick = () => toggleTask(index);
-    div.innerHTML = `
-        <div class="card-left">
-            <div class="icon-box">${dbData.icon}</div>
-            <div class="info">
-                <h3>${ex.name}</h3>
-                <p>${ex.sets} x ${ex.reps}</p>
-            </div>
+    const dbData = exercisesDB[ex.name] || { desc: "Упр", icon: "🤖", gif: "" };
+
+    // Определяем позицию (Центр -> Влево -> Центр -> Вправо)
+    // 0: Center, 1: Left, 2: Center, 3: Right
+    const posType = index % 4;
+    let posClass = 'pos-center';
+    if (posType === 1) posClass = 'pos-left';
+    if (posType === 3) posClass = 'pos-right';
+
+    // Создаем ряд
+    const row = document.createElement('div');
+    row.className = `duo-row ${posClass}`;
+
+    // Определяем состояние (Активен / Сделан / Закрыт)
+    const isDone = document.getElementById(`check-mem-${index}`)?.classList.contains('done'); // (можно хранить в localStorage, но пока упростим)
+    // В текущей логике мы используем классы динамически при клике,
+    // но при начальной загрузке все "серые", кроме первого, или если мы не сохраняем состояние внутри сессии.
+    // Для простоты: первый - активный, остальные закрыты, пока не нажмешь.
+
+    // Генерируем HTML узла
+    // Добавляем ID для чекбокса логики (хоть его и не видно)
+    const nodeId = `node-${index}`;
+
+    row.innerHTML = `
+        <div class="duo-node" id="${nodeId}" onclick="toggleDuoTask(${index}, this)">
+            ${dbData.icon}
+            <div class="checkbox hidden" id="check-${index}"></div>
         </div>
-        <div class="checkbox" id="check-${index}"></div>
     `;
-    list.appendChild(div);
+
+    // Добавляем соединительную линию (Connector) к ПРЕДЫДУЩЕМУ элементу (кроме первого)
+    if (index > 0) {
+        const line = document.createElement('div');
+        line.className = 'path-connector';
+
+        // Логика поворота линии
+        const prevPos = (index - 1) % 4;
+        const currPos = index % 4;
+
+        if (prevPos === 0 && currPos === 1) line.className += ' path-c-to-l'; // Center -> Left
+        if (prevPos === 1 && currPos === 2) line.className += ' path-l-to-c'; // Left -> Center
+        if (prevPos === 2 && currPos === 3) line.className += ' path-c-to-r'; // Center -> Right
+        if (prevPos === 3 && currPos === 0) line.className += ' path-r-to-c'; // Right -> Center
+
+        // Корректируем позицию линии (она абсолютная внутри duo-container, это сложно,
+        // проще вставить её внутрь предыдущего ряда или высчитать.
+        // УПРОЩЕНИЕ: Линия просто висит в текущем row и торчит ВВЕРХ)
+
+        // В данном CSS решении (простом) линия прибита к центру экрана.
+        // Для точного соединения нужно чуть больше математики, но визуально
+        // "dashed border" по центру часто достаточно.
+        // Оставим пока без сложной геометрии линий, просто пунктир по центру, если узлы по центру.
+        // Сделаем упрощенную линию внутри row, которая ведет "вверх".
+
+        // Переопределим логику линий для простоты:
+        // Линия будет просто dashed вертикальная палка, наклоненная CSS transform
+
+       line.style.top = "-50px"; // Тянемся к предыдущему ряду
+       if (posClass === 'pos-center') line.style.left = "50%";
+       if (posClass === 'pos-left') line.style.left = "30%"; // Подгон под 20% padding
+       if (posClass === 'pos-right') line.style.left = "70%";
+
+       // Вставляем линию в текущий ряд (чтобы она шла вверх)
+       // row.appendChild(line); <--- (Это требует тонкой настройки CSS, пока отключим сложные линии, оставим простую вертикаль)
+    }
+
+    pathContainer.appendChild(row);
 });
+
+// Активируем первый элемент (START)
+const firstNode = document.getElementById('node-0');
+if (firstNode) {
+    firstNode.classList.add('active');
+    const bubble = document.createElement('div');
+    bubble.className = 'speech-bubble';
+    bubble.innerText = 'СТАРТ';
+    firstNode.appendChild(bubble);
+}
+
+// 7. НОВАЯ ЛОГИКА КЛИКА (DUO STYLE)
+window.toggleDuoTask = function(index, element) {
+    const checkbox = document.getElementById(`check-${index}`);
+    const isDone = element.classList.contains('done');
+
+    // Если упражнение уже сделано - просто проигрываем звук
+    if (isDone) {
+        tg.HapticFeedback.impactOccurred('light');
+        return;
+    }
+
+    // Если упражнение НЕ активно (заблокировано) - трясем его (ошибка)
+    if (!element.classList.contains('active') && !isDone) {
+        tg.HapticFeedback.notificationOccurred('error');
+        element.style.animation = 'shake 0.5s';
+        setTimeout(() => element.style.animation = '', 500);
+        return;
+    }
+
+    // ЛОГИКА ЗАПУСКА
+    tg.HapticFeedback.impactOccurred('medium');
+    playSound('sound-click');
+
+    const exName = workout[index].name;
+    const dbData = exercisesDB[exName];
+
+    // Показываем таймер / задание
+    const img = document.getElementById('exercise-gif');
+    img.src = dbData.gif || "";
+    img.style.display = dbData.gif ? 'block' : 'none';
+
+    // Передаем контекст в таймер, чтобы по завершению отметить именно этот узел
+    window.currentTaskIndex = index;
+    startTimer(60);
+}
+
+// Перехватываем конец таймера, чтобы отметить "Выполнено"
+const originalStopTimer = window.stopTimer;
+window.stopTimer = function() {
+    originalStopTimer(); // Закрываем окно
+
+    // Отмечаем выполненным
+    if (typeof window.currentTaskIndex !== 'undefined') {
+        const idx = window.currentTaskIndex;
+        const node = document.getElementById(`node-${idx}`);
+        const checkbox = document.getElementById(`check-${idx}`);
+
+        if (node && !node.classList.contains('done')) {
+            // 1. Ставим статус DONE
+            node.classList.remove('active');
+            node.classList.add('done');
+
+            // 2. Удаляем "пузырь" (Старт)
+            const bubble = node.querySelector('.speech-bubble');
+            if (bubble) bubble.remove();
+
+            // 3. Отмечаем скрытый чекбокс (для прогресс-бара)
+            checkbox.classList.add('checked');
+
+            // 4. Открываем СЛЕДУЮЩИЙ уровень
+            const nextIdx = idx + 1;
+            const nextNode = document.getElementById(`node-${nextIdx}`);
+            if (nextNode) {
+                nextNode.classList.add('active');
+                // Скроллим к нему плавно
+                nextNode.scrollIntoView({behavior: "smooth", block: "center"});
+            }
+
+            playSound('sound-win'); // Звук успеха уровня
+            updateProgress(); // Обновляем общий бар
+        }
+    }
+}
 
 // 7. ФУНКЦИИ ИНТЕРФЕЙСА
 window.switchTab = function(tabId, element) {

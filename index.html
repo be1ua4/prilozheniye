@@ -309,6 +309,135 @@
             transition: height 1s cubic-bezier(0.19, 1, 0.22, 1);
             box-shadow: 0 0 20px rgba(0,242,255,0.3);
         }
+        /* --- DUOLINGO STYLE PATH --- */
+        .duo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            position: relative;
+            overflow: visible; /* Чтобы тени не обрекались */
+        }
+
+        /* Строка с узлом (уровнем) */
+        .duo-row {
+            position: relative;
+            width: 100%;
+            height: 100px; /* Высота шага */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+
+        /* Смещения для эффекта извилистой тропы */
+        .duo-row.pos-center { justify-content: center; }
+        .duo-row.pos-left { justify-content: flex-start; padding-left: 20%; }
+        .duo-row.pos-right { justify-content: flex-end; padding-right: 20%; }
+
+        /* Сам Узел (Круглая кнопка) */
+        .duo-node {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Пружинистый эффект */
+
+            /* 3D эффект кнопки */
+            background: #2b2b2e;
+            box-shadow: 0 6px 0 #1a1a1c;
+            border: 4px solid #3a3a3e;
+            color: #555;
+        }
+
+        /* СОСТОЯНИЕ: АКТИВНЫЙ (Текущее задание) */
+        .duo-node.active {
+            background: var(--primary);
+            box-shadow: 0 6px 0 #00bfcc; /* Тень темнее основного цвета */
+            border-color: #ffffff;
+            color: #000;
+            transform: scale(1.1);
+            animation: bounce 2s infinite;
+        }
+
+        /* СОСТОЯНИЕ: ЗАВЕРШЕНО */
+        .duo-node.done {
+            background: #ffd700; /* Золотой */
+            box-shadow: 0 6px 0 #d4b200;
+            border-color: #fffacD;
+            color: #8a6d00;
+        }
+        .duo-node.done::after {
+            content: '👑';
+            position: absolute;
+            bottom: -10px;
+            right: -5px;
+            font-size: 20px;
+        }
+
+        /* Эффект нажатия */
+        .duo-node:active {
+            transform: translateY(6px); /* Кнопка вдавливается */
+            box-shadow: 0 0 0 transparent;
+        }
+
+        /* Пунктирная линия (Тропинка) */
+        .path-connector {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 80px;
+            height: 100px;
+            border-left: 6px dashed rgba(255, 255, 255, 0.1);
+            z-index: 1;
+            transform-origin: top left;
+            pointer-events: none;
+        }
+
+        /* Хитрые повороты линий (SVG был бы лучше, но CSS проще для вставки) */
+        /* Линия из центра влево */
+        .path-c-to-l { transform: rotate(25deg) translate(0px, 10px); height: 110px; }
+        /* Линия слева в центр */
+        .path-l-to-c { transform: rotate(-25deg) translate(0px, 10px); height: 110px; }
+        /* Линия из центра вправо */
+        .path-c-to-r { transform: rotate(-25deg) translate(0px, 10px); height: 110px; }
+        /* Линия справа в центр */
+        .path-r-to-c { transform: rotate(25deg) translate(0px, 10px); height: 110px; }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: scale(1.1);}
+            40% {transform: scale(1.1) translateY(-10px);}
+            60% {transform: scale(1.1) translateY(-5px);}
+        }
+
+        /* Облачко с текстом над активным уровнем */
+        .speech-bubble {
+            position: absolute;
+            top: -45px;
+            background: white;
+            color: black;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+            animation: floatBubble 2s ease-in-out infinite;
+            z-index: 10;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -5px; left: 50%; margin-left: -5px;
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: white transparent;
+        }
+        @keyframes floatBubble { 0%, 100% {transform: translateY(0);} 50% {transform: translateY(-5px);} }
         .player-val-text {
             position: absolute; top: -25px; width: 100%; text-align: center;
             font-weight: bold; color: white; font-size: 12px;
