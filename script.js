@@ -335,26 +335,30 @@ window.closeWorkoutModal = function() {
 
 function renderDailyExercises(workoutData) {
     const list = document.getElementById('modal-exercise-list');
-    const progressBar = document.getElementById('modal-progress');
     const finishArea = document.getElementById('modal-finish-btn-area');
 
     list.innerHTML = "";
     finishArea.innerHTML = "";
-    progressBar.style.width = "0%";
+    updateModalProgress(); // Сбрасываем бар сразу при открытии
 
     window.activeWorkoutData = workoutData;
 
     workoutData.forEach((ex, index) => {
         const dbData = exercisesDB[ex.name] || { desc: "Упр", icon: "🏋️", gif: "" };
         const div = document.createElement('div');
+
+        div.id = `card-ex-${index}`;
         div.className = 'card';
+        // Первое упражнение сразу подсвечиваем
+        if (index === 0) div.classList.add('next-up');
+
         div.onclick = () => toggleTaskInModal(index);
         div.innerHTML = `
             <div class="card-left">
                 <div class="icon-box">${dbData.icon}</div>
                 <div class="info">
-                    <h3>${ex.name}</h3>
-                    <p>${ex.sets} x ${ex.reps}</p>
+                    <h3 style="margin:0; font-size:16px;">${ex.name}</h3>
+                    <p style="margin:0; color:var(--text-sec); font-size:13px;">${ex.sets} x ${ex.reps}</p>
                 </div>
             </div>
             <div class="checkbox" id="modal-check-${index}"></div>
@@ -365,9 +369,19 @@ function renderDailyExercises(workoutData) {
 
 window.toggleTaskInModal = function(index) {
     const checkbox = document.getElementById(`modal-check-${index}`);
+    const card = document.getElementById(`card-ex-${index}`);
 
     if (!checkbox.classList.contains('checked')) {
         checkbox.classList.add('checked');
+
+        // Гасим текущую карточку
+        card.classList.remove('next-up');
+        card.classList.add('completed');
+
+        // Подсвечиваем следующую
+        const nextCard = document.getElementById(`card-ex-${index + 1}`);
+        if (nextCard) nextCard.classList.add('next-up');
+
         tg.HapticFeedback.impactOccurred('medium');
         playSound('sound-click');
 
@@ -376,11 +390,21 @@ window.toggleTaskInModal = function(index) {
 
         const img = document.getElementById('exercise-gif');
         img.src = dbData ? dbData.gif : "";
-        img.style.display = dbData.gif ? 'block' : 'none';
 
-        startTimer(60);
+        if(dbData && dbData.gif) {
+            startTimer(60);
+        }
+
     } else {
         checkbox.classList.remove('checked');
+        card.classList.remove('completed');
+
+        // Возвращаем фокус
+        card.classList.add('next-up');
+
+        // Убираем фокус со следующей
+        const nextCard = document.getElementById(`card-ex-${index + 1}`);
+        if (nextCard) nextCard.classList.remove('next-up');
     }
 
     setTimeout(() => {
@@ -389,11 +413,23 @@ window.toggleTaskInModal = function(index) {
 }
 
 function updateModalProgress() {
+    if (!window.activeWorkoutData) return;
+
     const total = window.activeWorkoutData.length;
     const done = document.querySelectorAll('#modal-exercise-list .checkbox.checked').length;
-    const progressBar = document.getElementById('modal-progress');
 
-    progressBar.style.width = `${(done / total) * 100}%`;
+    const progressBar = document.getElementById('modal-progress');
+    const progressText = document.getElementById('modal-progress-text');
+
+    const percent = total === 0 ? 0 : (done / total) * 100;
+
+    // Теперь это работает плавно за счет CSS transition
+    progressBar.style.width = `${percent}%`;
+
+    if (progressText) {
+        progressText.innerText = `${done} / ${total}`;
+        progressText.style.color = (done === total) ? '#00ff00' : 'var(--text-sec)';
+    }
 
     const finishArea = document.getElementById('modal-finish-btn-area');
     if (done === total && total > 0) {
@@ -402,6 +438,9 @@ function updateModalProgress() {
                 🏁 ЗАВЕРШИТЬ ТРЕНИРОВКУ
             </button>
         `;
+        setTimeout(() => {
+            finishArea.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
     } else {
         finishArea.innerHTML = "";
     }
