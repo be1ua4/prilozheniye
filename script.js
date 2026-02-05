@@ -501,7 +501,7 @@ function sendDataAndClose() {
 }
 
 // =======================================================
-// 8. ТАЙМЕР И ИНТЕРФЕЙС
+// 8. ТАЙМЕР И СВАЙПЫ (GPU ОПТИМИЗАЦИЯ)
 // =======================================================
 
 let timerInterval;
@@ -511,41 +511,46 @@ function startTimer(seconds) {
     const display = document.getElementById('timerValue');
     let timeLeft = seconds;
 
-    modal.style.transition = 'bottom 0.5s cubic-bezier(0.19, 1, 0.22, 1)';
+    // Сбрасываем стили перед открытием
+    modal.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
     modal.style.transform = '';
-    modal.classList.add('active');
+
+    // Запускаем открытие через класс
+    requestAnimationFrame(() => {
+        modal.classList.add('active');
+    });
 
     clearInterval(timerInterval);
+    display.innerText = "01:00";
+
     timerInterval = setInterval(() => {
         timeLeft--;
-        const min = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-        const sec = (timeLeft % 60).toString().padStart(2, '0');
+        const min = Math.floor(timeLeft / 60).toString().padStart(2,'0');
+        const sec = (timeLeft % 60).toString().padStart(2,'0');
         display.innerText = `${min}:${sec}`;
-        if (timeLeft <= 0) stopTimer();
+        if(timeLeft <= 0) stopTimer();
     }, 1000);
 }
 
 window.stopTimer = function() {
     clearInterval(timerInterval);
-    document.getElementById('timerModal').classList.remove('active');
+    const modal = document.getElementById('timerModal');
 
+    // Закрываем убиранием класса
+    modal.classList.remove('active');
+
+    // Ждем окончания анимации закрытия (300мс) перед проверкой прогресса
     setTimeout(() => {
         updateModalProgress();
+        // Скролл к кнопке завершения, если она появилась
         const finishBtn = document.getElementById('modal-finish-btn-area');
         if (finishBtn && finishBtn.innerHTML !== "") {
             finishBtn.scrollIntoView({ behavior: "smooth", block: "center" });
         }
-    }, 100);
+    }, 300);
 }
 
-window.switchTab = function(tabId, element) {
-    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    element.classList.add('active');
-    tg.HapticFeedback.impactOccurred('light');
-}
-
+// 🔥 СУПЕР ПЛАВНЫЙ СВАЙП (60 FPS)
 function enableSwipeToClose() {
     const modal = document.getElementById('timerModal');
     let startY = 0;
@@ -553,41 +558,50 @@ function enableSwipeToClose() {
     let isDragging = false;
 
     modal.addEventListener('touchstart', (e) => {
+        // Разрешаем свайп, только если тянем за верхнюю часть (ручку или картинку)
+        // или если модалка полностью открыта
         startY = e.touches[0].clientY;
-        currentY = startY;
         isDragging = true;
+
+        // Отключаем плавность CSS, чтобы окно мгновенно прилипло к пальцу
         modal.style.transition = 'none';
-    }, {passive: false});
+    }, {passive: true});
 
     modal.addEventListener('touchmove', (e) => {
-        if (isDragging) e.preventDefault();
         if (!isDragging) return;
         currentY = e.touches[0].clientY;
         const diff = currentY - startY;
+
+        // Если тянем вниз (diff > 0)
         if (diff > 0) {
-            requestAnimationFrame(() => {
-                modal.style.transform = `translateY(${diff}px)`;
-            });
+            // Прямая манипуляция GPU слоем без задержек
+            modal.style.transform = `translate3d(0, ${diff}px, 0)`;
         }
-    }, {passive: false});
+    }, {passive: true});
 
     modal.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
         isDragging = false;
         const diff = currentY - startY;
-        modal.style.transition = 'transform 0.3s cubic-bezier(0.19, 1, 0.22, 1)';
-        if (diff > 100) {
-            modal.style.transform = 'translateY(100%)';
+
+        // Включаем обратно плавную анимацию для завершения жеста
+        modal.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+        // Если протащили вниз больше чем на 120px - закрываем
+        if (diff > 120) {
+            // Визуально уводим вниз (закрываем)
+            modal.style.transform = 'translate3d(0, 100%, 0)';
+            // Вызываем логику закрытия через 300мс
             setTimeout(() => {
+                modal.classList.remove('active');
+                modal.style.transform = ''; // Сброс
                 stopTimer();
-                setTimeout(() => {
-                    modal.style.transform = '';
-                    modal.style.transition = '';
-                }, 100);
             }, 300);
         } else {
-            modal.style.transform = 'translateY(0)';
+            // Если мало протащили - пружиним обратно вверх
+            modal.style.transform = ''; // Вернет к состоянию класса .active (0,0,0)
         }
-        startY = 0; currentY = 0;
+        startY = 0;
     });
 }
 enableSwipeToClose();

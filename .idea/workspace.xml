@@ -5,6 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5972d855-6adf-4f16-bfd2-d54b1e1a4d1b" name="Changes" comment="член">
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/script.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spirit.db" beforeDir="false" afterPath="$PROJECT_DIR$/spirit.db" afterDir="false" />
     </list>
@@ -104,30 +105,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1770157677464</updated>
-    </task>
-    <task id="LOCAL-00004" summary="1">
-      <option name="closed" value="true" />
-      <created>1770158967606</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1770158967606</updated>
-    </task>
-    <task id="LOCAL-00005" summary="1">
-      <option name="closed" value="true" />
-      <created>1770159033224</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1770159033224</updated>
-    </task>
-    <task id="LOCAL-00006" summary="1">
-      <option name="closed" value="true" />
-      <created>1770159225514</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1770159225514</updated>
     </task>
     <task id="LOCAL-00007" summary="1">
       <option name="closed" value="true" />
@@ -497,7 +474,31 @@
       <option name="project" value="LOCAL" />
       <updated>1770243158129</updated>
     </task>
-    <option name="localTasksCounter" value="53" />
+    <task id="LOCAL-00053" summary="член">
+      <option name="closed" value="true" />
+      <created>1770243593906</created>
+      <option name="number" value="00053" />
+      <option name="presentableId" value="LOCAL-00053" />
+      <option name="project" value="LOCAL" />
+      <updated>1770243593906</updated>
+    </task>
+    <task id="LOCAL-00054" summary="член">
+      <option name="closed" value="true" />
+      <created>1770243912457</created>
+      <option name="number" value="00054" />
+      <option name="presentableId" value="LOCAL-00054" />
+      <option name="project" value="LOCAL" />
+      <updated>1770243912457</updated>
+    </task>
+    <task id="LOCAL-00055" summary="член">
+      <option name="closed" value="true" />
+      <created>1770245181435</created>
+      <option name="number" value="00055" />
+      <option name="presentableId" value="LOCAL-00055" />
+      <option name="project" value="LOCAL" />
+      <updated>1770245181435</updated>
+    </task>
+    <option name="localTasksCounter" value="56" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
