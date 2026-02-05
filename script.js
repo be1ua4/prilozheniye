@@ -605,3 +605,34 @@ function enableSwipeToClose() {
     });
 }
 enableSwipeToClose();
+// =======================================================
+// 9. НАВИГАЦИЯ (Этой функции не хватало)
+// =======================================================
+window.switchTab = function(tabId, element) {
+    // 1. Скрываем все вкладки
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // 2. Убираем подсветку со всех кнопок
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // 3. Показываем нужную вкладку
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) {
+        targetTab.classList.add('active');
+    }
+
+    // 4. Подсвечиваем нажатую кнопку
+    if (element) {
+        element.classList.add('active');
+    }
+
+    // 5. Легкая вибрация для тактильности
+    tg.HapticFeedback.impactOccurred('light');
+
+    // Скроллим наверх
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
