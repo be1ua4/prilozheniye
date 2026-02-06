@@ -347,10 +347,28 @@ window.openWeekLevel = function(weekNum, element) {
     document.getElementById('modal-day-display').innerText = currentDay;
 
     let targetWorkout = [];
+
+    // --- ЛОГИКА ВЫБОРА ПРОГРАММЫ ---
+    // 1. Если это ТЕКУЩИЙ день и у нас есть AI-план из ссылки -> берем его
     if (weekNum === currentWeek && aiWorkout) {
         targetWorkout = aiWorkout;
-    } else {
-        targetWorkout = programs[weekNum] || [];
+
+        // Добавляем красивую пометку о типе тренировки
+        const typeIdx = ((currentDay - 1) % 3);
+        const types = ["СИЛА 🦍", "ВЗРЫВ 🧨", "СКОРОСТЬ ⚡️"];
+        document.getElementById('modal-title').innerText += ` | ${types[typeIdx]}`;
+    }
+    // 2. Если это прошедший день или нет плана - генерируем заглушку (так как мы удалили static data)
+    else {
+        // Простая заглушка, чтобы не ломать UI при просмотре истории
+        targetWorkout = [
+            { name: "Выпрыгивания", sets: 3, reps: 15 },
+            { name: "Прыжки на икрах", sets: 3, reps: 20 }
+        ];
+        // Если это старый день, можно показать пометку "Архив"
+        if (weekNum < currentWeek) {
+             document.getElementById('modal-title').innerText += " (Архив)";
+        }
     }
 
     renderDailyExercises(targetWorkout);
