@@ -8,7 +8,8 @@ tg.expand();
 const urlParams = new URLSearchParams(window.location.search);
 
 // Теперь безопасно считываем URL сервера
-const SERVER_URL = decodeURIComponent(urlParams.get('server_url') || "https://jumpcore.duckdns.org");
+// --- В script.js ---
+const SERVER_URL = decodeURIComponent(urlParams.get('server_url') || "https://app.feetonline.ru");
 const USER_ID = tg.initDataUnsafe?.user?.id; // ID юзера из Телеграм
 
 const currentWeek = parseInt(urlParams.get('week')) || 1;
