@@ -223,7 +223,7 @@
         .nav-item.active { opacity: 1; color: var(--primary); transform: translateY(-3px); text-shadow: 0 0 15px rgba(0,242,255,0.6); }
         .nav-icon { font-size: 22px; margin-bottom: 4px; }
 
-        /* --- ТАЙМЕР И МОДАЛКИ --- */
+
         /* --- ТАЙМЕР И МОДАЛКИ (GPU ОПТИМИЗАЦИЯ) --- */
         .timer-modal {
             position: fixed;
@@ -549,6 +549,14 @@
             text-shadow: 0 0 5px gold;
             transform: scale(1.2);
         }
+                /* --- 🔥 ВСТАВИТЬ СЮДА --- */
+        #glossary-info {
+            max-height: 60vh; /* Ограничиваем высоту текста */
+            overflow-y: auto; /* Разрешаем прокрутку */
+            -webkit-overflow-scrolling: touch; /* Плавность на iPhone */
+            overscroll-behavior-y: contain; /* ⛔️ ЗАПРЕЩАЕМ ТЯНУТЬ ВСЮ СТРАНИЦУ */
+            padding-bottom: 40px; /* Отступ снизу для удобства */
+        }
     </style>
 </head>
 <body>
@@ -700,6 +708,7 @@
         <div id="glossary-info" class="hidden" style="padding: 0 20px; text-align: left; width: 100%;">
             <h2 id="gloss-title" style="margin-top: 0;">Название</h2>
             <p id="gloss-desc" style="color: var(--text-sec); line-height: 1.5; font-size: 14px;">Описание...</p>
+
         </div>
 
         <div id="timer-controls">

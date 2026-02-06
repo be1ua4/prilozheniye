@@ -674,58 +674,77 @@ window.stopTimer = function() {
     }, 300);
 }
 
-// 🔥 СУПЕР ПЛАВНЫЙ СВАЙП (60 FPS)
+// 🔥 СУПЕР ПЛАВНЫЙ СВАЙП (ВЕРСИЯ 3.0 - FIX SCROLL)
 function enableSwipeToClose() {
     const modal = document.getElementById('timerModal');
+    const content = document.getElementById('glossary-info');
+
     let startY = 0;
     let currentY = 0;
     let isDragging = false;
+    let startScrollTop = 0;
+    let isTouchingContent = false; // Флаг: касаемся ли мы текста?
 
     modal.addEventListener('touchstart', (e) => {
-        // Разрешаем свайп, только если тянем за верхнюю часть (ручку или картинку)
-        // или если модалка полностью открыта
         startY = e.touches[0].clientY;
-        isDragging = true;
 
-        // Отключаем плавность CSS, чтобы окно мгновенно прилипло к пальцу
-        modal.style.transition = 'none';
-    }, {passive: true});
+        // Проверяем, коснулись ли мы блока с текстом
+        // e.target.closest('#glossary-info') вернет элемент, если мы внутри текста
+        isTouchingContent = !!e.target.closest('#glossary-info');
+
+        // ЛОГИКА:
+        // 1. Если мы касаемся текста, запоминаем его позицию скролла.
+        // 2. Если мы касаемся "ручки" или картинки (не текста), считаем скролл = 0 (всегда готовы тянуть).
+        if (isTouchingContent && !content.classList.contains('hidden')) {
+            startScrollTop = content.scrollTop;
+        } else {
+            startScrollTop = 0;
+        }
+
+        isDragging = true;
+    }, {passive: false}); // passive: false ОБЯЗАТЕЛЬНО для блокировки скролла страницы
 
     modal.addEventListener('touchmove', (e) => {
         if (!isDragging) return;
         currentY = e.touches[0].clientY;
         const diff = currentY - startY;
 
-        // Если тянем вниз (diff > 0)
-        if (diff > 0) {
-            // Прямая манипуляция GPU слоем без задержек
+        // Если тянем ВНИЗ (diff > 0) И мы находимся в самом верху текста (startScrollTop <= 0)
+        if (diff > 0 && startScrollTop <= 0) {
+            // ⛔️ Блокируем стандартный скролл страницы/телеграма
+            if (e.cancelable) e.preventDefault();
+
+            modal.style.transition = 'none';
             modal.style.transform = `translate3d(0, ${diff}px, 0)`;
         }
-    }, {passive: true});
+        // Если тянем текст вверх (читаем дальше) - работает обычный скролл (не preventDefault)
+    }, {passive: false});
 
     modal.addEventListener('touchend', (e) => {
         if (!isDragging) return;
         isDragging = false;
         const diff = currentY - startY;
 
-        // Включаем обратно плавную анимацию для завершения жеста
+        // Включаем обратно плавную анимацию
         modal.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
 
-        // Если протащили вниз больше чем на 120px - закрываем
-        if (diff > 120) {
-            // Визуально уводим вниз (закрываем)
+        // Если тянули окно вниз достаточно сильно и текст был наверху
+        if (diff > 120 && startScrollTop <= 0) {
+            // Закрываем
             modal.style.transform = 'translate3d(0, 100%, 0)';
-            // Вызываем логику закрытия через 300мс
             setTimeout(() => {
                 modal.classList.remove('active');
-                modal.style.transform = ''; // Сброс
+                modal.style.transform = '';
                 stopTimer();
             }, 300);
         } else {
-            // Если мало протащили - пружиним обратно вверх
-            modal.style.transform = ''; // Вернет к состоянию класса .active (0,0,0)
+            // Возвращаем на место (пружина)
+            if (modal.classList.contains('active')) {
+                modal.style.transform = 'translate3d(0, 0, 0)';
+            }
         }
         startY = 0;
+        currentY = 0;
     });
 }
 enableSwipeToClose();
