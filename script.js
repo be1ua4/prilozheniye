@@ -379,6 +379,36 @@ window.openWeekLevel = function(weekNum, element) {
         return;
     }
 
+    // 🔥 НОВАЯ ЛОГИКА: Если это текущая неделя, но плана НЕТ (aiWorkout пустой)
+    // Значит мы в режиме Fast Mode, и нужно красиво сгенерировать план.
+    if (weekNum === currentWeek && (!aiWorkout || aiWorkout.length === 0)) {
+        tg.HapticFeedback.notificationOccurred('warning');
+
+        // 1. Показываем эпичную заставку
+        const overlay = document.getElementById('ai-loading-overlay');
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
+
+        // 2. Анимация текста (для красоты)
+        const texts = ["Сканирование профиля...", "Анализ мышц...", "Генерация нейросети...", "Создание плана..."];
+        let step = 0;
+        const textEl = overlay.querySelector('p');
+
+        const interval = setInterval(() => {
+            if(step < texts.length) textEl.innerText = texts[step++];
+        }, 500);
+
+        // 3. Через 2 секунды (чтобы юзер успел кайфануть) отправляем сигнал боту
+        setTimeout(() => {
+            clearInterval(interval);
+            // Это закроет WebApp и отправит "generate_ai" боту
+            tg.sendData(JSON.stringify({ action: "generate_ai" }));
+        }, 2000);
+
+        return; // Прерываем открытие пустой модалки
+    }
+
+    // --- СТАНДАРТНОЕ ОТКРЫТИЕ (ЕСЛИ ПЛАН УЖЕ ЕСТЬ) ---
     tg.HapticFeedback.impactOccurred('light');
     document.getElementById('workout-modal-screen').classList.remove('hidden');
     document.getElementById('modal-title').innerText = `НЕДЕЛЯ ${weekNum}`;
@@ -386,19 +416,14 @@ window.openWeekLevel = function(weekNum, element) {
 
     let targetWorkout = [];
 
-    // --- ЛОГИКА ВЫБОРА ПРОГРАММЫ ---
-    // 1. Если это ТЕКУЩИЙ день и у нас есть AI-план из ссылки -> берем его
+    // Логика выбора (как и была)
     if (weekNum === currentWeek && aiWorkout) {
         targetWorkout = aiWorkout;
-
-        // 🔥 ИСПРАВЛЕННАЯ ЛОГИКА НАЗВАНИЙ (СИНХРОНИЗАЦИЯ С PYTHON)
         const typeIdx = ((currentDay - 1) % 3);
-        // День 1 = Собств. вес, День 2 = Сила, День 3 = Взрыв
         const types = ["СОБСТВЕННЫЙ ВЕС 🤸", "СИЛОВАЯ 🏋️", "ВЗРЫВНАЯ 🧨"];
         document.getElementById('modal-title').innerText += ` | ${types[typeIdx]}`;
-    }
-    // 2. Если это прошедший день или нет плана - генерируем заглушку
-    else {
+    } else {
+        // Заглушка для архива
         targetWorkout = [
             { name: "Выпрыгивания", sets: 3, reps: 15 },
             { name: "Прыжки на икрах", sets: 3, reps: 20 }

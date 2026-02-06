@@ -719,5 +719,18 @@
 
     <script src="data.js"></script>
     <script src="script.js"></script>
+    <div id="ai-loading-overlay" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,15,17,0.95); backdrop-filter:blur(10px); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center;">
+        <div style="font-size:60px; margin-bottom:20px; animation: pulse 1.5s infinite;">🧠</div>
+        <h2 style="margin:0; background: linear-gradient(to right, #00f2ff, #b000ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 24px;">NEURAL CORE</h2>
+        <p style="color:var(--text-sec); font-size:14px; margin-top:10px;">Инициализация...</p>
+        <div style="width: 200px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 30px; overflow: hidden;">
+            <div style="width: 50%; height: 100%; background: var(--primary); animation: loadBar 2s infinite ease-in-out;"></div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes loadBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+    </style>
 </body>
 </html>
