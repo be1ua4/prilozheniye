@@ -591,30 +591,67 @@ function updateModalProgress() {
     }
 }
 
+// ==========================================
+// ЛОГИКА ЗАВЕРШЕНИЯ (С ОЖИДАНИЕМ СЕРВЕРА)
+// ==========================================
 window.finishWorkoutFlow = function() {
     closeWorkoutModal();
 
-    // Экран успеха
+    // 1. Переключаем экраны
     document.getElementById('tab-workout').classList.remove('active');
     document.getElementById('success-screen').classList.remove('hidden');
     playSound('sound-win');
 
+    // 2. Рассчитываем награду
     const gain = parseFloat((0.35 + Math.random() * 0.2).toFixed(2));
     document.getElementById('jump-gain-display').innerText = `🚀 +${gain} см к прыжку`;
 
-    // 🔥 ОТПРАВЛЯЕМ ПРОГРЕСС НА СЕРВЕР (ФОНОМ)
+    // 3. НАСТРАИВАЕМ КНОПКУ: Блокируем и пишем "Сохранение..."
+    tg.MainButton.text = "⏳ СОХРАНЕНИЕ...";
+    tg.MainButton.color = "#888888"; // Серый цвет
+    tg.MainButton.textColor = "#ffffff";
+    tg.MainButton.show();
+    tg.MainButton.disable(); // Не даем нажать раньше времени
+
+    // 4. ОТПРАВЛЯЕМ ЗАПРОС И ЖДЕМ ОТВЕТА
     fetch(`${SERVER_URL}/api/complete`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ user_id: USER_ID, gain: gain })
-    }).then(res => console.log("Progress Saved"));
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            // ✅ УСПЕХ: Включаем синюю кнопку "ЗАКРЫТЬ"
+            tg.HapticFeedback.notificationOccurred('success');
+            tg.MainButton.text = "✅ ЗАКРЫТЬ";
+            tg.MainButton.color = "#00f2ff";
+            tg.MainButton.textColor = "#000000";
+            tg.MainButton.enable();
 
-    // Кнопка просто закрывает окно
-    tg.MainButton.text = "ЗАКРЫТЬ";
-    tg.MainButton.show();
-    tg.MainButton.onClick(() => {
-        tg.close();
+            // Вешаем действие закрытия (сначала удаляем старые, чтобы не двоилось)
+            tg.MainButton.offClick(closeApp);
+            tg.MainButton.onClick(closeApp);
+        } else {
+            // ❌ ОШИБКА СЕРВЕРА
+            tg.MainButton.text = "❌ ОШИБКА";
+            tg.MainButton.color = "#ff0000";
+            alert("Сервер не сохранил данные: " + data.error);
+        }
+    })
+    .catch(err => {
+        // ❌ ОШИБКА ИНТЕРНЕТА
+        console.error(err);
+        tg.MainButton.text = "❌ НЕТ СВЯЗИ";
+        tg.MainButton.color = "#ff0000";
+        alert("Проверьте интернет! Данные не ушли.");
+        tg.MainButton.enable(); // Даем нажать, чтобы попробовать снова или увидеть ошибку
     });
+}
+
+// Вспомогательная функция закрытия
+function closeApp() {
+    tg.close();
 }
 
 // =======================================================
