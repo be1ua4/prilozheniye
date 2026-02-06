@@ -4,7 +4,13 @@ tg.expand();
 // =======================================================
 // 1. ПАРСИНГ ПАРАМЕТРОВ (ИЗ URL)
 // =======================================================
+// 🔥 ИСПРАВЛЕНИЕ: Сначала создаем urlParams, потом используем
 const urlParams = new URLSearchParams(window.location.search);
+
+// Теперь безопасно считываем URL сервера
+const SERVER_URL = decodeURIComponent(urlParams.get('server_url') || "https://jumpcore.duckdns.org");
+const USER_ID = tg.initDataUnsafe?.user?.id; // ID юзера из Телеграм
+
 const currentWeek = parseInt(urlParams.get('week')) || 1;
 const currentDay = parseInt(urlParams.get('day')) || 1;
 const currentXP = parseInt(urlParams.get('xp')) || 0;
@@ -12,7 +18,7 @@ const pHeight = parseInt(urlParams.get('h')) || 0;
 const pWeight = parseInt(urlParams.get('w')) || 0;
 const pJump = parseFloat(urlParams.get('j')) || 0;
 const pReach = parseInt(urlParams.get('r')) || 0;
-const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner'); // Это статический опыт
+const pBg = decodeURIComponent(urlParams.get('bg') || 'Beginner');
 const pGoal = decodeURIComponent(urlParams.get('goal') || 'Vertical Jump');
 const userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 const currentStreak = parseInt(urlParams.get('streak')) || 0;
@@ -279,20 +285,49 @@ window.generateAIWorkout = function() {
 }
 
 window.saveProfile = function() {
+    // 1. Считываем данные из полей
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
-    const j = document.getElementById('in-jump').value;
-    const r = document.getElementById('in-reach').value;
+    const j = document.getElementById('in-jump').value || 0;
+    const r = document.getElementById('in-reach').value || 0;
+
+    // 🔥 ВАЖНОЕ ИСПРАВЛЕНИЕ: Считываем выбор из выпадающих списков
     const bg = document.getElementById('in-bg').value;
     const goal = document.getElementById('in-goal').value;
-    if(!h || !w || !goal || !r) {
-        tg.showAlert("Заполни все поля, атлет!");
+
+    // Проверка на обязательные поля
+    if(!h || !w) {
+        tg.showAlert("Заполни рост и вес, атлет!");
         return;
     }
-    tg.sendData(JSON.stringify({
-        action: "save_profile",
-        h: h, w: w, j: j || 0, r: r, bg: bg, goal: goal
-    }));
+
+    // 2. Отправляем на сервер реальные данные
+    fetch(`${SERVER_URL}/api/save_profile`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            user_id: USER_ID,
+            h: h,
+            w: w,
+            j: j,
+            r: r,
+            bg: bg,    // <-- Теперь передаем то, что выбрал юзер
+            goal: goal // <-- И цель тоже
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            tg.showAlert("Профиль успешно сохранен на сервере!");
+            // Можно перезагрузить страницу, чтобы обновить интерфейс
+            // location.reload();
+        } else {
+            tg.showAlert("Ошибка сервера при сохранении.");
+        }
+    })
+    .catch(error => {
+        console.error(error);
+        tg.showAlert("Не удалось связаться с сервером.");
+    });
 }
 
 function playSound(id) {
@@ -379,63 +414,66 @@ window.openWeekLevel = function(weekNum, element) {
         return;
     }
 
-    // 🔥 НОВАЯ ЛОГИКА: Если это текущая неделя, но плана НЕТ (aiWorkout пустой)
-    // Значит мы в режиме Fast Mode, и нужно красиво сгенерировать план.
+    // 🔥 ЕСЛИ ПЛАНА НЕТ -> ИДЕМ НА СЕРВЕР ЧЕРЕЗ API
     if (weekNum === currentWeek && (!aiWorkout || aiWorkout.length === 0)) {
         tg.HapticFeedback.notificationOccurred('warning');
 
-        // 1. Показываем эпичную заставку
+        // 1. Показываем заставку
         const overlay = document.getElementById('ai-loading-overlay');
+        const textEl = document.getElementById('loading-text');
         overlay.classList.remove('hidden');
         overlay.style.display = 'flex';
+        textEl.innerText = "СВЯЗЬ С СЕРВЕРОМ...";
 
-        // 2. Анимация текста (для красоты)
-        const texts = ["Сканирование профиля...", "Анализ мышц...", "Генерация нейросети...", "Создание плана..."];
-        let step = 0;
-        const textEl = overlay.querySelector('p');
+        // 2. Делаем запрос к вашему Python серверу
+        fetch(`${SERVER_URL}/api/generate`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user_id: USER_ID })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                // УСПЕХ! Сервер прислал план
+                aiWorkout = data.plan;
+                textEl.innerText = "ДАННЫЕ ПОЛУЧЕНЫ";
 
-        const interval = setInterval(() => {
-            if(step < texts.length) textEl.innerText = texts[step++];
-        }, 500);
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    overlay.style.display = 'none';
+                    // Открываем снова, теперь план есть
+                    openWeekLevel(weekNum, element);
+                    tg.HapticFeedback.notificationOccurred('success');
+                }, 500);
+            } else {
+                textEl.innerText = "ОШИБКА: " + data.error;
+            }
+        })
+        .catch(err => {
+            textEl.innerText = "СБОЙ СЕТИ";
+            console.error(err);
+        });
 
-        // 3. Через 2 секунды (чтобы юзер успел кайфануть) отправляем сигнал боту
-        setTimeout(() => {
-            clearInterval(interval);
-            // Это закроет WebApp и отправит "generate_ai" боту
-            tg.sendData(JSON.stringify({ action: "generate_ai" }));
-        }, 2000);
-
-        return; // Прерываем открытие пустой модалки
+        return;
     }
 
-    // --- СТАНДАРТНОЕ ОТКРЫТИЕ (ЕСЛИ ПЛАН УЖЕ ЕСТЬ) ---
+    // --- ОБЫЧНОЕ ОТКРЫТИЕ (Если план уже загружен) ---
     tg.HapticFeedback.impactOccurred('light');
     document.getElementById('workout-modal-screen').classList.remove('hidden');
     document.getElementById('modal-title').innerText = `НЕДЕЛЯ ${weekNum}`;
     document.getElementById('modal-day-display').innerText = currentDay;
 
     let targetWorkout = [];
-
-    // Логика выбора (как и была)
     if (weekNum === currentWeek && aiWorkout) {
         targetWorkout = aiWorkout;
         const typeIdx = ((currentDay - 1) % 3);
         const types = ["СОБСТВЕННЫЙ ВЕС 🤸", "СИЛОВАЯ 🏋️", "ВЗРЫВНАЯ 🧨"];
         document.getElementById('modal-title').innerText += ` | ${types[typeIdx]}`;
     } else {
-        // Заглушка для архива
-        targetWorkout = [
-            { name: "Выпрыгивания", sets: 3, reps: 15 },
-            { name: "Прыжки на икрах", sets: 3, reps: 20 }
-        ];
-        if (weekNum < currentWeek) {
-             document.getElementById('modal-title').innerText += " (Архив)";
-        }
+        targetWorkout = [{ name: "Выпрыгивания", sets: 3, reps: 15 }];
     }
-
     renderDailyExercises(targetWorkout);
 }
-
 window.closeWorkoutModal = function() {
     document.getElementById('workout-modal-screen').classList.add('hidden');
 }
@@ -555,7 +593,28 @@ function updateModalProgress() {
 
 window.finishWorkoutFlow = function() {
     closeWorkoutModal();
-    showSuccessScreen();
+
+    // Экран успеха
+    document.getElementById('tab-workout').classList.remove('active');
+    document.getElementById('success-screen').classList.remove('hidden');
+    playSound('sound-win');
+
+    const gain = parseFloat((0.35 + Math.random() * 0.2).toFixed(2));
+    document.getElementById('jump-gain-display').innerText = `🚀 +${gain} см к прыжку`;
+
+    // 🔥 ОТПРАВЛЯЕМ ПРОГРЕСС НА СЕРВЕР (ФОНОМ)
+    fetch(`${SERVER_URL}/api/complete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ user_id: USER_ID, gain: gain })
+    }).then(res => console.log("Progress Saved"));
+
+    // Кнопка просто закрывает окно
+    tg.MainButton.text = "ЗАКРЫТЬ";
+    tg.MainButton.show();
+    tg.MainButton.onClick(() => {
+        tg.close();
+    });
 }
 
 // =======================================================
