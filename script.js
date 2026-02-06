@@ -120,6 +120,33 @@ if (nextRankIdx < RANKS.length) {
 const dayDisplay = document.getElementById('day-display');
 dayDisplay.innerHTML = `ДЕНЬ ${currentDay} / 3`;
 
+// --- ЛОГИКА ПРОГРЕССА НЕДЕЛИ (ГЛАВНЫЙ ЭКРАН) ---
+const mainProgressBar = document.getElementById('progress');
+const mainProgressText = document.getElementById('progress-text-val');
+
+// Считаем процент: (Текущий день - 1) / 3 дня в неделе
+// День 1 = 0% (начало)
+// День 2 = 33% (1 прошел)
+// День 3 = 66% (2 прошло)
+let weeklyPercent = Math.round(((currentDay - 1) / 3) * 100);
+
+// Если неделя только началась, даем хотя бы 5% для красоты
+if (currentDay === 1) weeklyPercent = 2;
+
+if (mainProgressBar && mainProgressText) {
+    // Анимация при загрузке (через 300мс)
+    setTimeout(() => {
+        mainProgressBar.style.width = `${weeklyPercent}%`;
+
+        // Меняем цвет полоски на оранжевый, если это 3-й день (финишная прямая)
+        if (currentDay === 3) {
+            mainProgressBar.style.background = 'linear-gradient(90deg, #ff9800, #ff5722)';
+            mainProgressBar.style.boxShadow = '0 0 15px #ff5722';
+        }
+    }, 300);
+
+    mainProgressText.innerText = `${weeklyPercent}%`;
+}
 // Бейдж AI
 if (aiWorkout) {
     const badge = document.createElement('span');
