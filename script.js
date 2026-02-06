@@ -185,31 +185,70 @@ btn.onclick = window.refreshData;
 leaderContainer.appendChild(btn);
 
 
-// --- ВКЛАДКА JUMP (МАТЕМАТИКА) ---
-const rimHeight = 305;
-const maxTouch = pReach + pJump;
-const neededHeight = rimHeight - maxTouch;
-document.getElementById('calc-touch').innerText = maxTouch.toFixed(1);
+// =======================================================
+// ЛОГИКА ГЛОССАРИЯ (WIKI)
+// =======================================================
 
-if (maxTouch >= rimHeight) {
-    document.getElementById('calc-need').innerText = "0 (ТЫ ДОСТАЛ!)";
-    document.getElementById('calc-need').style.color = "#00ff00";
-} else {
-    document.getElementById('calc-need').innerText = neededHeight.toFixed(1);
+function renderGlossary() {
+    const list = document.getElementById('glossary-list');
+    list.innerHTML = ""; // Очищаем
+
+    // Пробегаемся по базе данных exercisesDB из data.js
+    for (const [name, data] of Object.entries(exercisesDB)) {
+        const div = document.createElement('div');
+        div.className = 'card'; // Используем тот же стиль, что и в тренировке
+        div.onclick = () => openGlossaryItem(name, data);
+
+        div.innerHTML = `
+            <div class="card-left">
+                <div class="icon-box" style="background: rgba(255,255,255,0.05);">${data.icon}</div>
+                <div class="info">
+                    <h3 style="margin:0; font-size:15px;">${name}</h3>
+                    <p style="margin:0; color:var(--text-sec); font-size:12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">
+                        ${data.desc}
+                    </p>
+                </div>
+            </div>
+            <div style="color: var(--text-sec); font-size: 20px;">›</div>
+        `;
+        list.appendChild(div);
+    }
 }
 
-document.getElementById('jump-tab-val').innerText = pJump.toFixed(2);
-if (lastGain > 0) {
-    document.getElementById('jump-tab-gain').innerText = `+${lastGain} см (посл. треня)`;
-} else {
-    document.getElementById('jump-tab-gain').innerText = "Тренируйся, чтобы расти!";
-    document.getElementById('jump-tab-gain').style.background = 'transparent';
-    document.getElementById('jump-tab-gain').style.color = '#8b8b93';
+// Запускаем рендер при старте
+renderGlossary();
+
+function openGlossaryItem(name, data) {
+    const modal = document.getElementById('timerModal');
+    const img = document.getElementById('exercise-gif');
+
+    // Элементы глоссария
+    const glossInfo = document.getElementById('glossary-info');
+    const glossTitle = document.getElementById('gloss-title');
+    const glossDesc = document.getElementById('gloss-desc');
+
+    // Элементы таймера (их надо скрыть)
+    const timerControls = document.getElementById('timer-controls');
+
+    // 1. Наполняем контент
+    img.src = data.gif;
+    glossTitle.innerText = name;
+    glossDesc.innerText = data.desc;
+
+    // 2. Переключаем режим модалки (Инфо вместо Таймера)
+    timerControls.classList.add('hidden');
+    glossInfo.classList.remove('hidden');
+
+    // 3. Открываем модалку (анимация)
+    modal.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+    modal.style.transform = '';
+    requestAnimationFrame(() => {
+        modal.classList.add('active');
+    });
+
+    // Вибрация
+    tg.HapticFeedback.impactOccurred('light');
 }
-
-const barHeight = (maxTouch / 320) * 100;
-document.getElementById('rim-bar').style.height = `${barHeight}%`;
-
 // =======================================================
 // 4. ФУНКЦИИ ВЗАИМОДЕЙСТВИЯ С БОТОМ
 // =======================================================
@@ -590,7 +629,10 @@ let timerInterval;
 
 function startTimer(seconds) {
     const modal = document.getElementById('timerModal');
-    const display = document.getElementById('timerValue');
+
+    // 🔥 ФИКС: Показываем таймер, скрываем текст глоссария
+    document.getElementById('timer-controls').classList.remove('hidden');
+    document.getElementById('glossary-info').classList.add('hidden');
     let timeLeft = seconds;
 
     // Сбрасываем стили перед открытием

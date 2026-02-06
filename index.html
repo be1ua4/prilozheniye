@@ -639,12 +639,14 @@
             <button class="refresh-btn" onclick="refreshData()">🔄 Обновить таблицу</button>
         </div>
 
-        <div id="tab-jump" class="tab-content">
-            <h2 style="text-align: center;">Мой Прыжок</h2>
-            <div class="jump-header">
-                <div class="jump-main-val"><span id="jump-tab-val">0</span> см</div>
-                <div class="jump-gain-lbl" id="jump-tab-gain">+0.0 см</div>
-            </div>
+        <div id="tab-glossary" class="tab-content">
+            <h2 style="text-align: center;">База Знаний</h2>
+            <p style="text-align: center; color: var(--text-sec); font-size: 13px; margin-bottom: 20px;">
+                Нажми на упражнение, чтобы увидеть технику.
+            </p>
+
+            <div id="glossary-list" style="padding-bottom: 50px;"></div>
+        </div>
 
             <div class="rim-visual">
                 <div class="rim-line"><span class="rim-text">305 см (Кольцо)</span></div>
@@ -695,7 +697,10 @@
     <nav class="bottom-nav" id="nav-bar">
         <div class="nav-item active" onclick="switchTab('tab-workout', this)"><div class="nav-icon">💪</div><div>Work</div></div>
         <div class="nav-item" onclick="switchTab('tab-leaderboard', this)"><div class="nav-icon">🏆</div><div>Top</div></div>
-        <div class="nav-item" onclick="switchTab('tab-jump', this)"><div class="nav-icon">🦘</div><div>Jump</div></div>
+        <div class="nav-item" onclick="switchTab('tab-glossary', this)">
+        <div class="nav-icon">📚</div>
+        <div>Wiki</div>
+    </div>
         <div class="nav-item" onclick="switchTab('tab-profile', this)"><div class="nav-icon">👤</div><div>Me</div></div>
     </nav>
 
@@ -703,8 +708,16 @@
         <div class="modal-handle"></div>
 
         <img id="exercise-gif" src="" alt="Demo">
-        <div class="timer-display" id="timerValue" style="font-size: 48px; font-weight: bold; margin: 20px 0;">01:00</div>
-        <button class="btn-skip" onclick="stopTimer()">Пропустить</button>
+
+        <div id="glossary-info" class="hidden" style="padding: 0 20px; text-align: left; width: 100%;">
+            <h2 id="gloss-title" style="margin-top: 0;">Название</h2>
+            <p id="gloss-desc" style="color: var(--text-sec); line-height: 1.5; font-size: 14px;">Описание...</p>
+        </div>
+
+        <div id="timer-controls">
+            <div class="timer-display" id="timerValue" style="font-size: 48px; font-weight: bold; margin: 20px 0;">01:00</div>
+            <button class="btn-skip" onclick="stopTimer()">Пропустить</button>
+        </div>
     </div>
 
     <script src="data.js"></script>
