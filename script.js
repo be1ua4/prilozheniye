@@ -277,6 +277,207 @@ window.saveProfile = function() {
         tg.showAlert("Не удалось связаться с сервером.");
     });
 }
+// =======================================================
+// 🔥 ЗАЩИТА ОТ КРАША: ПРОВЕРКА TELEGRAM
+// =======================================================
+if (!USER_ID) {
+    console.warn("⚠️ Приложение открыто вне Telegram. USER_ID = demo.");
+    const demoId = 999999; // Для тестирования
+    window.USER_ID = demoId;
+} else {
+    window.USER_ID = USER_ID;
+}
+
+// =======================================================
+// 🔥 НЕДОСТАЮЩИЕ ФУНКЦИИ
+// =======================================================
+
+// 1️⃣ ГЕНЕРАЦИЯ AI ТРЕНИРОВКИ
+window.generateAIWorkout = function() {
+    if (!window.USER_ID) {
+        tg.showAlert("Ошибка: Нет USER_ID");
+        return;
+    }
+
+    const overlay = document.getElementById('ai-loading-overlay');
+    if (!overlay) return;
+
+    overlay.classList.remove('hidden');
+    overlay.style.display = 'flex';
+
+    fetch(`${SERVER_URL}/api/generate`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ user_id: window.USER_ID })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        overlay.classList.add('hidden');
+
+        if (data.status === 'ok' && data.plan) {
+            aiWorkout = data.plan;
+            tg.showAlert("✅ Программа сгенерирована!");
+
+            // Открываем модалку с новой тренировкой
+            document.getElementById('workout-modal-screen').classList.remove('hidden');
+            document.getElementById('modal-title').innerText = `НЕДЕЛЯ ${currentWeek}`;
+            const modalDayDisplay = document.getElementById('modal-day-display');
+            if (modalDayDisplay) modalDayDisplay.innerText = currentDay;
+            renderDailyExercises(aiWorkout);
+        } else {
+            tg.showAlert("❌ Ошибка: " + (data.error || "Неизвестная ошибка"));
+        }
+    })
+    .catch(error => {
+        overlay.classList.add('hidden');
+        console.error("API Error:", error);
+        tg.showAlert(`🔴 Сбой связи: ${error.message}`);
+    });
+}
+
+// 2️⃣ ОБНОВЛЕНИЕ ДАННЫХ
+window.refreshData = function() {
+    tg.showAlert("🔄 Функция в разработке");
+    // TODO: Запросить свежие данные с сервера
+}
+
+// =======================================================
+// 🔥 УЛУЧШЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ ПРОФИЛЯ
+// =======================================================
+window.saveProfile = function() {
+    const h = document.getElementById('in-height').value;
+    const w = document.getElementById('in-weight').value;
+    const j = document.getElementById('in-jump').value || 0;
+    const r = document.getElementById('in-reach').value || 0;
+    const bg = document.getElementById('in-bg').value;
+    const goal = document.getElementById('in-goal').value;
+
+    if(!h || !w) {
+        tg.showAlert("❌ Заполни рост и вес!");
+        return;
+    }
+
+    if (!window.USER_ID) {
+        tg.showAlert("❌ Ошибка: Нет USER_ID. Открой через Telegram.");
+        return;
+    }
+
+    // Показываем индикатор загрузки
+    const btn = event.target;
+    btn.disabled = true;
+    btn.innerText = "⏳ СОХРАНЕНИЕ...";
+
+    fetch(`${SERVER_URL}/api/save_profile`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            user_id: window.USER_ID,
+            h: h, w: w, j: j, r: r, bg: bg, goal: goal
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'ok') {
+            tg.showAlert("✅ Профиль сохранен!");
+
+            // 🔥 Обновляем глобальные переменные
+            pHeight = parseInt(h);
+            pWeight = parseInt(w);
+            pJump = parseFloat(j);
+            pReach = parseInt(r);
+            pBg = bg;
+            pGoal = goal;
+
+            syncUI();
+            checkOnboarding();
+        } else {
+            throw new Error(data.error || "Неизвестная ошибка");
+        }
+    })
+    .catch(error => {
+        console.error("Save Error:", error);
+        tg.showAlert(`🔴 Ошибка: ${error.message}`);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerText = "СОХРАНИТЬ ПРОФИЛЬ";
+    });
+}
+
+// =======================================================
+// 🔥 УЛУЧШЕННАЯ ФУНКЦИЯ ЗАВЕРШЕНИЯ ТРЕНИРОВКИ
+// =======================================================
+window.finishWorkoutFlow = function() {
+    closeWorkoutModal();
+
+    document.getElementById('tab-workout').classList.remove('active');
+    document.getElementById('success-screen').classList.remove('hidden');
+
+    const gain = parseFloat((0.35 + Math.random() * 0.2).toFixed(2));
+    const gainDisplay = document.getElementById('jump-gain-display');
+    if (gainDisplay) gainDisplay.innerText = `🚀 +${gain} см к прыжку`;
+
+    if (!window.USER_ID) {
+        tg.showAlert("⚠️ Демо-режим. Прогресс не сохранен.");
+        return;
+    }
+
+    tg.MainButton.text = "⏳ СОХРАНЕНИЕ...";
+    tg.MainButton.show();
+    tg.MainButton.disable();
+
+    fetch(`${SERVER_URL}/api/complete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            user_id: window.USER_ID,
+            gain: gain
+        })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'ok') {
+            tg.MainButton.text = "✅ ЗАКРЫТЬ";
+            tg.MainButton.enable();
+            tg.MainButton.onClick(() => tg.close());
+
+            // 🔥 Обновляем прогресс
+            currentDay++;
+            if(currentDay > 3) {
+                currentDay = 1;
+                currentWeek++;
+            }
+            currentXP += 50;
+            pJump += gain;
+            lastGain = gain;
+
+            syncUI();
+            tg.showAlert("🎉 Прогресс сохранен!");
+        } else {
+            throw new Error(data.error || "Неизвестная ошибка");
+        }
+    })
+    .catch(error => {
+        console.error("Complete Error:", error);
+        tg.MainButton.text = "❌ ОШИБКА";
+        tg.showAlert(`🔴 Не удалось сохранить: ${error.message}`);
+
+        setTimeout(() => {
+            tg.MainButton.text = "🔄 ПОВТОРИТЬ";
+            tg.MainButton.enable();
+            tg.MainButton.onClick(finishWorkoutFlow);
+        }, 2000);
+    });
+}
 
 // =======================================================
 // 5. КАРТА ПУТИ И ТРЕНИРОВКИ
