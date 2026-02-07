@@ -6,9 +6,8 @@ tg.expand();
 // =======================================================
 const urlParams = new URLSearchParams(window.location.search);
 
-const USER_ID = tg.initDataUnsafe?.user?.id || parseInt(urlParams.get('user_id'))
 const SERVER_URL = decodeURIComponent(urlParams.get('server_url') || "https://app.feetonline.ru");
-const USER_ID = tg.initDataUnsafe?.user?.id;
+const USER_ID = tg.initDataUnsafe?.user?.id || parseInt(urlParams.get('user_id'));
 
 // Используем let для динамического обновления
 let currentWeek = parseInt(urlParams.get('week')) || 1;
