@@ -9,7 +9,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const SERVER_URL = decodeURIComponent(urlParams.get('server_url') || "https://app.feetonline.ru");
 const USER_ID = tg.initDataUnsafe?.user?.id;
 
-// 🔥 ИЗМЕНЕНИЕ: Используем let вместо const для динамического обновления
+// 🔥 ПРАВКА: Используем let, чтобы данные сохранялись в памяти после ввода
 let currentWeek = parseInt(urlParams.get('week')) || 1;
 let currentDay = parseInt(urlParams.get('day')) || 1;
 let currentXP = parseInt(urlParams.get('xp')) || 0;
@@ -23,7 +23,7 @@ let userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 let currentStreak = parseInt(urlParams.get('streak')) || 0;
 let lastGain = parseFloat(urlParams.get('gain')) || 0;
 
-// 🔥 НОВОЕ: Универсальная синхронизация UI без хардкода
+// 🔥 НОВОЕ: Универсальная синхронизация UI (без хардкода по одной строчке)
 function syncUI() {
     const mapping = {
         'display-height': pHeight,
@@ -34,7 +34,9 @@ function syncUI() {
         'week-num': currentWeek,
         'streak-display': currentStreak,
         'profile-name': userName,
-        'display-xp': currentXP
+        'display-xp': currentXP,
+        'leader-name': userName,
+        'leader-xp': currentXP + " XP"
     };
 
     for (const [id, val] of Object.entries(mapping)) {
@@ -44,6 +46,7 @@ function syncUI() {
 
     updateRankBadge();
 
+    // Пересчет калькулятора данка
     const touchMax = pReach + pJump;
     const need = 305 - touchMax;
     const touchEl = document.getElementById('calc-touch');
@@ -121,15 +124,12 @@ function checkOnboarding() {
     }
 }
 
-// Первичный запуск
 checkOnboarding();
 syncUI();
 
-// Логика отображения "ДЕНЬ Х"
 const dayDisplay = document.getElementById('day-display');
 if (dayDisplay) dayDisplay.innerHTML = `ДЕНЬ ${currentDay} / 3`;
 
-// --- ЛОГИКА ПРОГРЕССА НЕДЕЛИ ---
 const mainProgressBar = document.getElementById('progress');
 const mainProgressText = document.getElementById('progress-text-val');
 
@@ -154,14 +154,13 @@ if (aiWorkout && dayDisplay) {
     dayDisplay.appendChild(badge);
 }
 
-// --- ТАБЛИЦА ЛИДЕРОВ ---
+// Отрисовка лидерборда
 const leaderContainer = document.getElementById('tab-leaderboard');
 if (leaderContainer) {
     leaderContainer.innerHTML = `
         <h2 style="text-align: center;">Топ Атлетов</h2>
         <p style="text-align: center; opacity: 0.5; font-size: 12px;">Глобальный рейтинг (Beta)</p>
     `;
-
     leadersList.forEach((item, index) => {
         const [name, xp] = item.split(':');
         const isMe = name === userName;
@@ -177,16 +176,10 @@ if (leaderContainer) {
         `;
         leaderContainer.appendChild(div);
     });
-
-    const refreshBtn = document.createElement('button');
-    refreshBtn.className = 'refresh-btn';
-    refreshBtn.innerText = '🔄 Обновить таблицу';
-    refreshBtn.onclick = window.refreshData;
-    leaderContainer.appendChild(refreshBtn);
 }
 
 // =======================================================
-// ЛОГИКА ГЛОССАРИЯ (WIKI)
+// 3. ЛОГИКА ГЛОССАРИЯ И ТАЙМЕРА
 // =======================================================
 function renderGlossary() {
     const list = document.getElementById('glossary-list');
@@ -201,9 +194,7 @@ function renderGlossary() {
                 <div class="icon-box" style="background: rgba(255,255,255,0.05);">${data.icon}</div>
                 <div class="info">
                     <h3 style="margin:0; font-size:15px;">${name}</h3>
-                    <p style="margin:0; color:var(--text-sec); font-size:12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">
-                        ${data.desc}
-                    </p>
+                    <p style="margin:0; color:var(--text-sec); font-size:12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${data.desc}</p>
                 </div>
             </div>
             <div style="color: var(--text-sec); font-size: 20px;">›</div>
@@ -236,34 +227,8 @@ function openGlossaryItem(name, data) {
 }
 
 // =======================================================
-// 4. ФУНКЦИИ ВЗАИМОДЕЙСТВИЯ С БОТОМ
+// 4. ФУНКЦИИ ВЗАИМОДЕЙСТВИЯ (API)
 // =======================================================
-window.refreshData = function() {
-    tg.showPopup({
-        title: 'Обновление данных',
-        message: 'Приложение перезагрузится. Продолжить?',
-        buttons: [{id: 'ok', type: 'default', text: 'Да'}, {id: 'cancel', type: 'cancel', text: 'Отмена'}]
-    }, function(buttonId) {
-        if (buttonId === 'ok') {
-            tg.HapticFeedback.impactOccurred('medium');
-            tg.sendData(JSON.stringify({ action: "refresh" }));
-        }
-    });
-}
-
-window.generateAIWorkout = function() {
-    tg.showPopup({
-        title: 'AI Тренер 🤖',
-        message: 'Нейросеть составит новую уникальную программу на сегодня. Текущая тренировка будет заменена. Продолжить?',
-        buttons: [{id: 'yes', type: 'default', text: 'Да, подобрать'}, {id: 'no', type: 'cancel', text: 'Отмена'}]
-    }, function(btn) {
-        if (btn === 'yes') {
-            tg.HapticFeedback.impactOccurred('heavy');
-            tg.sendData(JSON.stringify({ action: "generate_ai" }));
-        }
-    });
-}
-
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
@@ -280,16 +245,13 @@ window.saveProfile = function() {
     fetch(`${SERVER_URL}/api/save_profile`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            user_id: USER_ID,
-            h: h, w: w, j: j, r: r, bg: bg, goal: goal
-        })
+        body: JSON.stringify({ user_id: USER_ID, h: h, w: w, j: j, r: r, bg: bg, goal: goal })
     })
     .then(response => {
         if (response.ok) {
             tg.showAlert("Профиль успешно сохранен!");
 
-            // 🔥 ОБНОВЛЯЕМ ПЕРЕМЕННЫЕ
+            // 🔥 ОБНОВЛЯЕМ ПЕРЕМЕННЫЕ В ПАМЯТИ
             pHeight = parseInt(h);
             pWeight = parseInt(w);
             pJump = parseFloat(j);
@@ -297,10 +259,9 @@ window.saveProfile = function() {
             pBg = bg;
             pGoal = goal;
 
-            // 🔥 СИНХРОНИЗИРУЕМ UI
+            // 🔥 СИНХРОНИЗИРУЕМ UI И ПЕРЕКЛЮЧАЕМ ЭКРАН
             syncUI();
             checkOnboarding();
-
         } else {
             tg.showAlert("Ошибка сервера при сохранении.");
         }
@@ -311,7 +272,9 @@ window.saveProfile = function() {
     });
 }
 
-// --- КАРТА ПУТИ ---
+// =======================================================
+// 5. КАРТА ПУТИ И ТРЕНИРОВКИ
+// =======================================================
 const pathContainer = document.getElementById('exercise-list');
 if (pathContainer) {
     pathContainer.innerHTML = `<div class="duo-container" id="map-container"></div>`;
@@ -320,17 +283,11 @@ if (pathContainer) {
 
     for (let w = 1; w <= TOTAL_WEEKS; w++) {
         const posType = w % 4;
-        let posClass = 'pos-center';
-        if (posType === 1) posClass = 'pos-left';
-        if (posType === 3) posClass = 'pos-right';
-
+        let posClass = (posType === 1) ? 'pos-left' : (posType === 3) ? 'pos-right' : 'pos-center';
         const row = document.createElement('div');
         row.className = `duo-row ${posClass}`;
 
-        let statusClass = 'locked';
-        if (w < currentWeek) statusClass = 'done';
-        else if (w === currentWeek) statusClass = 'active';
-
+        let statusClass = (w < currentWeek) ? 'done' : (w === currentWeek) ? 'active' : 'locked';
         let earnedCrowns = (w < currentWeek) ? 3 : (w === currentWeek ? currentDay - 1 : 0);
         let crownsHtml = '';
         for (let i = 0; i < 3; i++) crownsHtml += `<span class="crown-icon ${i < earnedCrowns ? 'earned' : ''}">👑</span>`;
@@ -355,11 +312,8 @@ window.openWeekLevel = function(weekNum, element) {
     }
     if (weekNum === currentWeek && (!aiWorkout || aiWorkout.length === 0)) {
         const overlay = document.getElementById('ai-loading-overlay');
-        const textEl = document.getElementById('loading-text');
         overlay.classList.remove('hidden');
         overlay.style.display = 'flex';
-        textEl.innerText = "СВЯЗЬ С СЕРВЕРОМ...";
-
         fetch(`${SERVER_URL}/api/generate`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -375,15 +329,11 @@ window.openWeekLevel = function(weekNum, element) {
         });
         return;
     }
-
-    tg.HapticFeedback.impactOccurred('light');
     document.getElementById('workout-modal-screen').classList.remove('hidden');
     document.getElementById('modal-title').innerText = `НЕДЕЛЯ ${weekNum}`;
     const modalDayDisplay = document.getElementById('modal-day-display');
     if (modalDayDisplay) modalDayDisplay.innerText = currentDay;
-
-    let targetWorkout = (weekNum === currentWeek && aiWorkout) ? aiWorkout : [{ name: "Выпрыгивания", sets: 3, reps: 15 }];
-    renderDailyExercises(targetWorkout);
+    renderDailyExercises((weekNum === currentWeek && aiWorkout) ? aiWorkout : [{ name: "Выпрыгивания", sets: 3, reps: 15 }]);
 }
 
 window.closeWorkoutModal = function() {
@@ -469,7 +419,6 @@ window.finishWorkoutFlow = function() {
             tg.MainButton.text = "✅ ЗАКРЫТЬ";
             tg.MainButton.enable();
             tg.MainButton.onClick(() => tg.close());
-
             currentDay++;
             if(currentDay > 3) { currentDay = 1; currentWeek++; }
             currentXP += 50;
@@ -479,6 +428,9 @@ window.finishWorkoutFlow = function() {
     });
 }
 
+// =======================================================
+// 6. ТАЙМЕР И СВАЙП-ЛОГИКА
+// =======================================================
 let timerInterval;
 const timerValueDisplay = document.getElementById('timerValue');
 function startTimer(seconds) {
@@ -514,26 +466,16 @@ window.switchTab = function(tabId, element) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// 🔥 СВАЙП-ЛОГИКА (СОХРАНЕНА)
 function enableSwipeToClose() {
     const modal = document.getElementById('timerModal');
     const content = document.getElementById('glossary-info');
     if (!modal || !content) return;
 
-    let startY = 0;
-    let currentY = 0;
-    let isDragging = false;
-    let startScrollTop = 0;
-    let isTouchingContent = false;
+    let startY = 0; let currentY = 0; let isDragging = false; let startScrollTop = 0;
 
     modal.addEventListener('touchstart', (e) => {
         startY = e.touches[0].clientY;
-        isTouchingContent = !!e.target.closest('#glossary-info');
-        if (isTouchingContent && !content.classList.contains('hidden')) {
-            startScrollTop = content.scrollTop;
-        } else {
-            startScrollTop = 0;
-        }
+        startScrollTop = content.scrollTop;
         isDragging = true;
     }, {passive: false});
 
@@ -548,22 +490,16 @@ function enableSwipeToClose() {
         }
     }, {passive: false});
 
-    modal.addEventListener('touchend', (e) => {
+    modal.addEventListener('touchend', () => {
         if (!isDragging) return;
         isDragging = false;
         const diff = currentY - startY;
         modal.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
         if (diff > 120 && startScrollTop <= 0) {
             modal.style.transform = 'translate3d(0, 100%, 0)';
-            setTimeout(() => {
-                modal.classList.remove('active');
-                modal.style.transform = '';
-                stopTimer();
-            }, 300);
+            setTimeout(() => { modal.classList.remove('active'); modal.style.transform = ''; stopTimer(); }, 300);
         } else {
-            if (modal.classList.contains('active')) {
-                modal.style.transform = 'translate3d(0, 0, 0)';
-            }
+            if (modal.classList.contains('active')) modal.style.transform = 'translate3d(0, 0, 0)';
         }
     });
 }
