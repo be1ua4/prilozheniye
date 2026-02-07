@@ -291,36 +291,39 @@ window.saveProfile = function() {
     const w = document.getElementById('in-weight').value;
     const j = document.getElementById('in-jump').value || 0;
     const r = document.getElementById('in-reach').value || 0;
-
-    // 🔥 ВАЖНОЕ ИСПРАВЛЕНИЕ: Считываем выбор из выпадающих списков
     const bg = document.getElementById('in-bg').value;
     const goal = document.getElementById('in-goal').value;
 
-    // Проверка на обязательные поля
     if(!h || !w) {
         tg.showAlert("Заполни рост и вес, атлет!");
         return;
     }
 
-    // 2. Отправляем на сервер реальные данные
+    // 2. Отправляем на сервер
     fetch(`${SERVER_URL}/api/save_profile`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             user_id: USER_ID,
-            h: h,
-            w: w,
-            j: j,
-            r: r,
-            bg: bg,    // <-- Теперь передаем то, что выбрал юзер
-            goal: goal // <-- И цель тоже
+            h: h, w: w, j: j, r: r, bg: bg, goal: goal
         })
     })
     .then(response => {
         if (response.ok) {
-            tg.showAlert("Профиль успешно сохранен на сервере!");
-            // Можно перезагрузить страницу, чтобы обновить интерфейс
-            // location.reload();
+            tg.showAlert("Профиль успешно сохранен!");
+
+            // 🔥 ПЕРЕХОД В ПРИЛОЖЕНИЕ
+            document.getElementById('onboarding-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('nav-bar').classList.remove('hidden');
+
+            // Обновляем текст в профиле, чтобы не было нулей
+            document.getElementById('display-height').innerText = h;
+            document.getElementById('display-jump').innerText = parseFloat(j).toFixed(1);
+            document.getElementById('display-reach').innerText = r;
+            document.getElementById('display-bg').innerText = bg;
+            document.getElementById('display-goal').innerText = goal;
+
         } else {
             tg.showAlert("Ошибка сервера при сохранении.");
         }
