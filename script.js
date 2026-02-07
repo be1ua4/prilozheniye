@@ -6,6 +6,7 @@ tg.expand();
 // =======================================================
 const urlParams = new URLSearchParams(window.location.search);
 
+const USER_ID = tg.initDataUnsafe?.user?.id || parseInt(urlParams.get('user_id'))
 const SERVER_URL = decodeURIComponent(urlParams.get('server_url') || "https://app.feetonline.ru");
 const USER_ID = tg.initDataUnsafe?.user?.id;
 
@@ -526,7 +527,7 @@ window.openWeekLevel = function(weekNum, element) {
         fetch(`${SERVER_URL}/api/generate`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ user_id: USER_ID })
+            body: JSON.stringify({ user_id: window.USER_ID }) // ПРАВИЛЬНО
         })
         .then(r => r.json())
         .then(data => {

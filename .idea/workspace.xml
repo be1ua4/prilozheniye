@@ -6,6 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="5972d855-6adf-4f16-bfd2-d54b1e1a4d1b" name="Changes" comment="член">
       <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/script.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -68,7 +70,7 @@
       <recent name="C:\Users\Gleb\PycharmProjects\prilozheniye\gifs" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.khti">
+  <component name="RunManager" selected="Python.main">
     <configuration name="khti" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="prilozheniye" />
       <option name="ENV_FILES" value="" />
@@ -115,8 +117,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.khti" />
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.khti" />
       </list>
     </recent_temporary>
   </component>
@@ -134,22 +136,6 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1770157677464</updated>
-    </task>
-    <task id="LOCAL-00025" summary="1">
-      <option name="closed" value="true" />
-      <created>1770204559110</created>
-      <option name="number" value="00025" />
-      <option name="presentableId" value="LOCAL-00025" />
-      <option name="project" value="LOCAL" />
-      <updated>1770204559110</updated>
-    </task>
-    <task id="LOCAL-00026" summary="1">
-      <option name="closed" value="true" />
-      <created>1770205127969</created>
-      <option name="number" value="00026" />
-      <option name="presentableId" value="LOCAL-00026" />
-      <option name="project" value="LOCAL" />
-      <updated>1770205127969</updated>
     </task>
     <task id="LOCAL-00027" summary="1">
       <option name="closed" value="true" />
@@ -527,7 +513,23 @@
       <option name="project" value="LOCAL" />
       <updated>1770471120893</updated>
     </task>
-    <option name="localTasksCounter" value="74" />
+    <task id="LOCAL-00074" summary="член">
+      <option name="closed" value="true" />
+      <created>1770471548883</created>
+      <option name="number" value="00074" />
+      <option name="presentableId" value="LOCAL-00074" />
+      <option name="project" value="LOCAL" />
+      <updated>1770471548883</updated>
+    </task>
+    <task id="LOCAL-00075" summary="член">
+      <option name="closed" value="true" />
+      <created>1770472186761</created>
+      <option name="number" value="00075" />
+      <option name="presentableId" value="LOCAL-00075" />
+      <option name="project" value="LOCAL" />
+      <updated>1770472186761</updated>
+    </task>
+    <option name="localTasksCounter" value="76" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
