@@ -9,7 +9,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const SERVER_URL = decodeURIComponent(urlParams.get('server_url') || "https://app.feetonline.ru");
 const USER_ID = tg.initDataUnsafe?.user?.id;
 
-// 🔥 ПРАВКА: Используем let, чтобы данные сохранялись в памяти после ввода
+// Используем let для динамического обновления
 let currentWeek = parseInt(urlParams.get('week')) || 1;
 let currentDay = parseInt(urlParams.get('day')) || 1;
 let currentXP = parseInt(urlParams.get('xp')) || 0;
@@ -23,7 +23,7 @@ let userName = decodeURIComponent(urlParams.get('name') || 'Атлет');
 let currentStreak = parseInt(urlParams.get('streak')) || 0;
 let lastGain = parseFloat(urlParams.get('gain')) || 0;
 
-// 🔥 НОВОЕ: Универсальная синхронизация UI (без хардкода по одной строчке)
+// 🔥 НОВОЕ: Универсальная синхронизация UI
 function syncUI() {
     const mapping = {
         'display-height': pHeight,
@@ -56,6 +56,10 @@ function syncUI() {
         needEl.innerText = need > 0 ? need : "DONE! ✅";
         if (need <= 0) needEl.style.color = "#00ff00";
     }
+
+    // 🔥 ПЕРЕРИСОВЫВАЕМ КАРТУ И ТОП (теперь это функции)
+    renderMap();
+    renderLeaderboard();
 }
 
 // --- СИСТЕМА РАНГОВ ---
@@ -109,6 +113,31 @@ try {
 const leadersRaw = decodeURIComponent(urlParams.get('top') || "");
 const leadersList = leadersRaw ? leadersRaw.split('|') : ["Beast:5000", "Machine:3000", "You:0"];
 
+function renderLeaderboard() {
+    const leaderContainer = document.getElementById('tab-leaderboard');
+    if (leaderContainer) {
+        leaderContainer.innerHTML = `
+            <h2 style="text-align: center;">Топ Атлетов</h2>
+            <p style="text-align: center; opacity: 0.5; font-size: 12px;">Глобальный рейтинг (Beta)</p>
+        `;
+        leadersList.forEach((item, index) => {
+            const [name, xp] = item.split(':');
+            const isMe = name === userName;
+            const div = document.createElement('div');
+            div.className = 'card';
+            if (isMe) div.style.borderColor = 'var(--primary)';
+            div.innerHTML = `
+                <div class="card-left">
+                    <b style="color:var(--primary); margin-right:10px;">#${index + 1}</b>
+                    <div>${name} ${isMe ? '(Вы)' : ''}</div>
+                </div>
+                <div style="font-weight:bold;">${xp} XP</div>
+            `;
+            leaderContainer.appendChild(div);
+        });
+    }
+}
+
 // =======================================================
 // 2. ПРОВЕРКА ДАННЫХ И ИНИЦИАЛИЗАЦИЯ
 // =======================================================
@@ -124,6 +153,7 @@ function checkOnboarding() {
     }
 }
 
+// Инициализация
 checkOnboarding();
 syncUI();
 
@@ -152,30 +182,6 @@ if (aiWorkout && dayDisplay) {
     badge.className = 'ai-badge';
     badge.innerHTML = 'AI 🧠';
     dayDisplay.appendChild(badge);
-}
-
-// Отрисовка лидерборда
-const leaderContainer = document.getElementById('tab-leaderboard');
-if (leaderContainer) {
-    leaderContainer.innerHTML = `
-        <h2 style="text-align: center;">Топ Атлетов</h2>
-        <p style="text-align: center; opacity: 0.5; font-size: 12px;">Глобальный рейтинг (Beta)</p>
-    `;
-    leadersList.forEach((item, index) => {
-        const [name, xp] = item.split(':');
-        const isMe = name === userName;
-        const div = document.createElement('div');
-        div.className = 'card';
-        if (isMe) div.style.borderColor = 'var(--primary)';
-        div.innerHTML = `
-            <div class="card-left">
-                <b style="color:var(--primary); margin-right:10px;">#${index + 1}</b>
-                <div>${name} ${isMe ? '(Вы)' : ''}</div>
-            </div>
-            <div style="font-weight:bold;">${xp} XP</div>
-        `;
-        leaderContainer.appendChild(div);
-    });
 }
 
 // =======================================================
@@ -251,7 +257,7 @@ window.saveProfile = function() {
         if (response.ok) {
             tg.showAlert("Профиль успешно сохранен!");
 
-            // 🔥 ОБНОВЛЯЕМ ПЕРЕМЕННЫЕ В ПАМЯТИ
+            // 🔥 ОБНОВЛЯЕМ ПЕРЕМЕННЫЕ
             pHeight = parseInt(h);
             pWeight = parseInt(w);
             pJump = parseFloat(j);
@@ -275,8 +281,10 @@ window.saveProfile = function() {
 // =======================================================
 // 5. КАРТА ПУТИ И ТРЕНИРОВКИ
 // =======================================================
-const pathContainer = document.getElementById('exercise-list');
-if (pathContainer) {
+function renderMap() {
+    const pathContainer = document.getElementById('exercise-list');
+    if (!pathContainer) return;
+
     pathContainer.innerHTML = `<div class="duo-container" id="map-container"></div>`;
     const mapContainer = document.getElementById('map-container');
     const TOTAL_WEEKS = Math.max(15, currentWeek + 5);
@@ -325,7 +333,14 @@ window.openWeekLevel = function(weekNum, element) {
                 aiWorkout = data.plan;
                 overlay.classList.add('hidden');
                 openWeekLevel(weekNum, element);
+            } else {
+                overlay.classList.add('hidden');
+                tg.showAlert("Ошибка генерации: " + (data.error || "неизвестно"));
             }
+        })
+        .catch(err => {
+            overlay.classList.add('hidden');
+            tg.showAlert("Сбой связи с сервером");
         });
         return;
     }
