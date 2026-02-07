@@ -51,13 +51,13 @@ function syncUI() {
     const need = 305 - touchMax;
     const touchEl = document.getElementById('calc-touch');
     const needEl = document.getElementById('calc-need');
-    if (touchEl) touchEl.innerText = touchMax;
+    if (touchEl) touchEl.innerText = touchMax.toFixed(1);
     if (needEl) {
-        needEl.innerText = need > 0 ? need : "DONE! ✅";
+        needEl.innerText = need > 0 ? need.toFixed(1) : "DONE! ✅";
         if (need <= 0) needEl.style.color = "#00ff00";
     }
 
-    // 🔥 ПЕРЕРИСОВЫВАЕМ КАРТУ И ТОП (теперь это функции)
+    // 🔥 ПЕРЕРИСОВЫВАЕМ КАРТУ И ТОП
     renderMap();
     renderLeaderboard();
 }
@@ -121,7 +121,9 @@ function renderLeaderboard() {
             <p style="text-align: center; opacity: 0.5; font-size: 12px;">Глобальный рейтинг (Beta)</p>
         `;
         leadersList.forEach((item, index) => {
-            const [name, xp] = item.split(':');
+            const parts = item.split(':');
+            const name = parts[0];
+            const xp = parts[1] || "0";
             const isMe = name === userName;
             const div = document.createElement('div');
             div.className = 'card';
@@ -191,6 +193,14 @@ function renderGlossary() {
     const list = document.getElementById('glossary-list');
     if (!list) return;
     list.innerHTML = "";
+
+    // 🔥 ВАЖНАЯ ПРОВЕРКА: Загрузился ли data.js?
+    if (typeof exercisesDB === 'undefined') {
+        console.warn("База упражнений не найдена!");
+        list.innerHTML = "<p style='text-align:center;'>Ошибка загрузки базы упражнений</p>";
+        return;
+    }
+
     for (const [name, data] of Object.entries(exercisesDB)) {
         const div = document.createElement('div');
         div.className = 'card';
@@ -233,63 +243,18 @@ function openGlossaryItem(name, data) {
 }
 
 // =======================================================
-// 4. ФУНКЦИИ ВЗАИМОДЕЙСТВИЯ (API)
-// =======================================================
-window.saveProfile = function() {
-    const h = document.getElementById('in-height').value;
-    const w = document.getElementById('in-weight').value;
-    const j = document.getElementById('in-jump').value || 0;
-    const r = document.getElementById('in-reach').value || 0;
-    const bg = document.getElementById('in-bg').value;
-    const goal = document.getElementById('in-goal').value;
-
-    if(!h || !w) {
-        tg.showAlert("Заполни рост и вес, атлет!");
-        return;
-    }
-
-    fetch(`${SERVER_URL}/api/save_profile`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ user_id: USER_ID, h: h, w: w, j: j, r: r, bg: bg, goal: goal })
-    })
-    .then(response => {
-        if (response.ok) {
-            tg.showAlert("Профиль успешно сохранен!");
-
-            // 🔥 ОБНОВЛЯЕМ ПЕРЕМЕННЫЕ
-            pHeight = parseInt(h);
-            pWeight = parseInt(w);
-            pJump = parseFloat(j);
-            pReach = parseInt(r);
-            pBg = bg;
-            pGoal = goal;
-
-            // 🔥 СИНХРОНИЗИРУЕМ UI И ПЕРЕКЛЮЧАЕМ ЭКРАН
-            syncUI();
-            checkOnboarding();
-        } else {
-            tg.showAlert("Ошибка сервера при сохранении.");
-        }
-    })
-    .catch(error => {
-        console.error(error);
-        tg.showAlert("Не удалось связаться с сервером.");
-    });
-}
-// =======================================================
 // 🔥 ЗАЩИТА ОТ КРАША: ПРОВЕРКА TELEGRAM
 // =======================================================
 if (!USER_ID) {
     console.warn("⚠️ Приложение открыто вне Telegram. USER_ID = demo.");
-    const demoId = 999999; // Для тестирования
+    const demoId = 999999;
     window.USER_ID = demoId;
 } else {
     window.USER_ID = USER_ID;
 }
 
 // =======================================================
-// 🔥 НЕДОСТАЮЩИЕ ФУНКЦИИ
+// 4. API ФУНКЦИИ
 // =======================================================
 
 // 1️⃣ ГЕНЕРАЦИЯ AI ТРЕНИРОВКИ
@@ -340,13 +305,11 @@ window.generateAIWorkout = function() {
 
 // 2️⃣ ОБНОВЛЕНИЕ ДАННЫХ
 window.refreshData = function() {
-    tg.showAlert("🔄 Функция в разработке");
-    // TODO: Запросить свежие данные с сервера
+    tg.showAlert("🔄 Обновление страницы...");
+    window.location.reload();
 }
 
-// =======================================================
-// 🔥 УЛУЧШЕННАЯ ФУНКЦИЯ СОХРАНЕНИЯ ПРОФИЛЯ
-// =======================================================
+// 3️⃣ СОХРАНЕНИЕ ПРОФИЛЯ
 window.saveProfile = function() {
     const h = document.getElementById('in-height').value;
     const w = document.getElementById('in-weight').value;
@@ -360,15 +323,8 @@ window.saveProfile = function() {
         return;
     }
 
-    if (!window.USER_ID) {
-        tg.showAlert("❌ Ошибка: Нет USER_ID. Открой через Telegram.");
-        return;
-    }
-
-    // Показываем индикатор загрузки
-    const btn = event.target;
-    btn.disabled = true;
-    btn.innerText = "⏳ СОХРАНЕНИЕ...";
+    const btn = document.querySelector('.save-btn');
+    if (btn) { btn.disabled = true; btn.innerText = "⏳ СОХРАНЕНИЕ..."; }
 
     fetch(`${SERVER_URL}/api/save_profile`, {
         method: 'POST',
@@ -385,15 +341,12 @@ window.saveProfile = function() {
     .then(data => {
         if (data.status === 'ok') {
             tg.showAlert("✅ Профиль сохранен!");
-
-            // 🔥 Обновляем глобальные переменные
             pHeight = parseInt(h);
             pWeight = parseInt(w);
             pJump = parseFloat(j);
             pReach = parseInt(r);
             pBg = bg;
             pGoal = goal;
-
             syncUI();
             checkOnboarding();
         } else {
@@ -401,81 +354,10 @@ window.saveProfile = function() {
         }
     })
     .catch(error => {
-        console.error("Save Error:", error);
         tg.showAlert(`🔴 Ошибка: ${error.message}`);
     })
     .finally(() => {
-        btn.disabled = false;
-        btn.innerText = "СОХРАНИТЬ ПРОФИЛЬ";
-    });
-}
-
-// =======================================================
-// 🔥 УЛУЧШЕННАЯ ФУНКЦИЯ ЗАВЕРШЕНИЯ ТРЕНИРОВКИ
-// =======================================================
-window.finishWorkoutFlow = function() {
-    closeWorkoutModal();
-
-    document.getElementById('tab-workout').classList.remove('active');
-    document.getElementById('success-screen').classList.remove('hidden');
-
-    const gain = parseFloat((0.35 + Math.random() * 0.2).toFixed(2));
-    const gainDisplay = document.getElementById('jump-gain-display');
-    if (gainDisplay) gainDisplay.innerText = `🚀 +${gain} см к прыжку`;
-
-    if (!window.USER_ID) {
-        tg.showAlert("⚠️ Демо-режим. Прогресс не сохранен.");
-        return;
-    }
-
-    tg.MainButton.text = "⏳ СОХРАНЕНИЕ...";
-    tg.MainButton.show();
-    tg.MainButton.disable();
-
-    fetch(`${SERVER_URL}/api/complete`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            user_id: window.USER_ID,
-            gain: gain
-        })
-    })
-    .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === 'ok') {
-            tg.MainButton.text = "✅ ЗАКРЫТЬ";
-            tg.MainButton.enable();
-            tg.MainButton.onClick(() => tg.close());
-
-            // 🔥 Обновляем прогресс
-            currentDay++;
-            if(currentDay > 3) {
-                currentDay = 1;
-                currentWeek++;
-            }
-            currentXP += 50;
-            pJump += gain;
-            lastGain = gain;
-
-            syncUI();
-            tg.showAlert("🎉 Прогресс сохранен!");
-        } else {
-            throw new Error(data.error || "Неизвестная ошибка");
-        }
-    })
-    .catch(error => {
-        console.error("Complete Error:", error);
-        tg.MainButton.text = "❌ ОШИБКА";
-        tg.showAlert(`🔴 Не удалось сохранить: ${error.message}`);
-
-        setTimeout(() => {
-            tg.MainButton.text = "🔄 ПОВТОРИТЬ";
-            tg.MainButton.enable();
-            tg.MainButton.onClick(finishWorkoutFlow);
-        }, 2000);
+        if (btn) { btn.disabled = false; btn.innerText = "СОХРАНИТЬ ПРОФИЛЬ"; }
     });
 }
 
@@ -520,36 +402,18 @@ window.openWeekLevel = function(weekNum, element) {
         return;
     }
     if (weekNum === currentWeek && (!aiWorkout || aiWorkout.length === 0)) {
-        const overlay = document.getElementById('ai-loading-overlay');
-        overlay.classList.remove('hidden');
-        overlay.style.display = 'flex';
-        fetch(`${SERVER_URL}/api/generate`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ user_id: window.USER_ID }) // ПРАВИЛЬНО
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (data.status === 'ok') {
-                aiWorkout = data.plan;
-                overlay.classList.add('hidden');
-                openWeekLevel(weekNum, element);
-            } else {
-                overlay.classList.add('hidden');
-                tg.showAlert("Ошибка генерации: " + (data.error || "неизвестно"));
-            }
-        })
-        .catch(err => {
-            overlay.classList.add('hidden');
-            tg.showAlert("Сбой связи с сервером");
-        });
+        // Если плана нет, пробуем сгенерировать
+        generateAIWorkout();
         return;
     }
     document.getElementById('workout-modal-screen').classList.remove('hidden');
     document.getElementById('modal-title').innerText = `НЕДЕЛЯ ${weekNum}`;
     const modalDayDisplay = document.getElementById('modal-day-display');
     if (modalDayDisplay) modalDayDisplay.innerText = currentDay;
-    renderDailyExercises((weekNum === currentWeek && aiWorkout) ? aiWorkout : [{ name: "Выпрыгивания", sets: 3, reps: 15 }]);
+
+    // Показываем упражнения (или дефолтные, если это старая неделя)
+    const workoutToShow = (weekNum === currentWeek && aiWorkout) ? aiWorkout : [{ name: "Выпрыгивания", sets: 3, reps: 15 }];
+    renderDailyExercises(workoutToShow);
 }
 
 window.closeWorkoutModal = function() {
@@ -561,15 +425,19 @@ function renderDailyExercises(workoutData) {
     if (!list) return;
     list.innerHTML = "";
     window.activeWorkoutData = workoutData;
+
     workoutData.forEach((ex, index) => {
-        const dbData = exercisesDB[ex.name] || { icon: "🏋️" };
+        // Безопасное получение данных упражнения
+        const dbData = (typeof exercisesDB !== 'undefined') ? exercisesDB[ex.name] : null;
+        const icon = dbData ? dbData.icon : "🏋️";
+
         const div = document.createElement('div');
         div.id = `card-ex-${index}`;
         div.className = 'card' + (index === 0 ? ' next-up' : '');
         div.onclick = () => toggleTaskInModal(index);
         div.innerHTML = `
             <div class="card-left">
-                <div class="icon-box">${dbData.icon}</div>
+                <div class="icon-box">${icon}</div>
                 <div class="info"><h3>${ex.name}</h3><p>${ex.sets} x ${ex.reps}</p></div>
             </div>
             <div class="checkbox" id="modal-check-${index}"></div>
@@ -589,10 +457,14 @@ window.toggleTaskInModal = function(index) {
         const nextCard = document.getElementById(`card-ex-${index + 1}`);
         if (nextCard) nextCard.classList.add('next-up');
         tg.HapticFeedback.impactOccurred('medium');
-        const dbData = exercisesDB[window.activeWorkoutData[index].name];
-        if(dbData && dbData.gif) {
-            document.getElementById('exercise-gif').src = dbData.gif;
-            startTimer(60);
+
+        // Запуск таймера если есть GIF
+        if (typeof exercisesDB !== 'undefined') {
+            const dbData = exercisesDB[window.activeWorkoutData[index].name];
+            if(dbData && dbData.gif) {
+                document.getElementById('exercise-gif').src = dbData.gif;
+                startTimer(60);
+            }
         }
     }
     updateModalProgress();
@@ -606,6 +478,7 @@ function updateModalProgress() {
     const modalProgressText = document.getElementById('modal-progress-text');
     if (modalProgressBar) modalProgressBar.style.width = `${percent}%`;
     if (modalProgressText) modalProgressText.innerText = `${done} / ${total}`;
+
     const finishArea = document.getElementById('modal-finish-btn-area');
     if (finishArea && done === total && total > 0) {
         finishArea.innerHTML = `<button onclick="finishWorkoutFlow()" class="save-btn">🏁 ЗАВЕРШИТЬ ТРЕНИРОВКУ</button>`;
@@ -627,7 +500,7 @@ window.finishWorkoutFlow = function() {
     fetch(`${SERVER_URL}/api/complete`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ user_id: USER_ID, gain: gain })
+        body: JSON.stringify({ user_id: window.USER_ID, gain: gain })
     })
     .then(r => r.json())
     .then(data => {
